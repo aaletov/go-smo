@@ -1,8 +1,8 @@
 package queue
 
 import (
-	"errors"
 	"container/list"
+	"errors"
 )
 
 type Comparable interface {
@@ -13,7 +13,7 @@ type PriorityQueue[T Comparable] interface {
 	Push(value T) error
 	Front() *QueueElement[T]
 	Back() *QueueElement[T]
-	Add(value T) 
+	Add(value T)
 	Pop() T
 }
 
@@ -22,10 +22,16 @@ type QueueElement[T Comparable] struct {
 }
 
 func (e QueueElement[T]) Next() *QueueElement[T] {
+	if e.ListElement.Next() == nil {
+		return nil
+	}
 	return &QueueElement[T]{e.ListElement.Next()}
 }
 
 func (e QueueElement[T]) Prev() *QueueElement[T] {
+	if e.ListElement.Prev() == nil {
+		return nil
+	}
 	return &QueueElement[T]{e.ListElement.Prev()}
 }
 
@@ -48,21 +54,27 @@ func (l *orderedList[T]) Push(value T) error {
 		l.list.PushBack(value)
 		return nil
 	}
-	
+
 	return errors.New("Value is smaller than the last element of queue")
 }
 
 func (l orderedList[T]) Front() *QueueElement[T] {
+	if l.list.Front() == nil {
+		return nil
+	}
 	return &QueueElement[T]{l.list.Front()}
 }
 
-func (l orderedList[T])	Back() *QueueElement[T] {
+func (l orderedList[T]) Back() *QueueElement[T] {
+	if l.list.Back() == nil {
+		return nil
+	}
 	return &QueueElement[T]{l.list.Back()}
 }
 
 func (l *orderedList[T]) Add(value T) {
-	for el := l.Front(); el != l.Back(); el = el.Next() {
-		if (value.Less(el.Get())) {
+	for el := l.Front(); el != nil; el = el.Next() {
+		if value.Less(el.Get()) {
 			l.list.InsertBefore(value, el.ListElement)
 			return
 		}
@@ -71,6 +83,6 @@ func (l *orderedList[T]) Add(value T) {
 }
 
 func (l orderedList[T]) Pop() T {
-	back := l.list.Back()
-	return l.list.Remove(back).(T)
+	front := l.list.Front()
+	return l.list.Remove(front).(T)
 }
