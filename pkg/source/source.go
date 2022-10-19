@@ -14,16 +14,15 @@ type Source interface {
 }
 
 var (
-	sourcesCount int32 = 0
-	randSource         = rand.NewSource(uint64(time.Now().UnixNano()))
+	sourcesCount int = 0
+	randSource       = rand.NewSource(uint64(time.Now().UnixNano()))
 )
 
 // Lambda is an expected value of time passed until next req
 func NewSource(lambda time.Duration) Source {
-	sourceNumber := sourcesCount + 1
 	sourcesCount++
 	return &sourceImpl{
-		sourceNumber:  sourceNumber,
+		sourceNumber:  sourcesCount,
 		lastReqNumber: 0,
 		lastGenTime:   clock.SMOClock.Time,
 		lambda:        lambda,
@@ -35,8 +34,8 @@ func NewSource(lambda time.Duration) Source {
 }
 
 type sourceImpl struct {
-	sourceNumber  int32
-	lastReqNumber int32
+	sourceNumber  int
+	lastReqNumber int
 	lastGenTime   time.Time
 	lambda        time.Duration
 	gen           distuv.Poisson
