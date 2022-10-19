@@ -30,6 +30,7 @@ func NewSource(lambda time.Duration) Source {
 			Lambda: float64(lambda),
 			Src:    randSource,
 		},
+		allGenerated: make([]request.ReqWGT, 0),
 	}
 }
 
@@ -39,11 +40,21 @@ type sourceImpl struct {
 	lastGenTime   time.Time
 	lambda        time.Duration
 	gen           distuv.Poisson
+	allGenerated  []request.ReqWGT
 }
 
 func (s *sourceImpl) GetRequest() (*request.Request, time.Time) {
 	duration := time.Duration(int64(s.gen.Rand()))
 	time := s.lastGenTime.Add(duration)
 	s.lastGenTime = time
-	return &request.Request{}, time
+	s.lastReqNumber++
+	req := request.Request{
+		SourceNumber:  s.sourceNumber,
+		RequestNumber: s.lastReqNumber,
+	}
+	s.allGenerated = append(s.allGenerated, request.ReqWGT{
+		Req:  &req,
+		Time: time,
+	})
+	return &req, time
 }

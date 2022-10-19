@@ -9,11 +9,12 @@ import (
 
 type Request = request.Request
 type ReqWGT = request.ReqWGT
+type ReqSE = request.ReqSE
 
 type Buffer interface {
 	IsFree() bool
-	Add(req *Request) error
-	Pop() (*Request, error)
+	Add(reqwgt *ReqWGT) error
+	Pop(popTime time.Time) (*Request, error)
 }
 
 var (
@@ -23,32 +24,39 @@ var (
 func NewBuffer(procTime time.Duration) Buffer {
 	bufCount++
 	return &bufferImpl{
-		bufNumber: bufCount,
+		bufNumber:    bufCount,
+		allProcessed: make([]ReqSE, 0),
 	}
 }
 
 type bufferImpl struct {
-	bufNumber int
-	req       *Request
+	bufNumber    int
+	reqwgt       *ReqWGT
+	allProcessed []ReqSE
 }
 
 func (b bufferImpl) IsFree() bool {
-	return b.req == nil
+	return b.reqwgt == nil
 }
 
-func (b *bufferImpl) Add(req *Request) error {
-	if req != nil {
+func (b *bufferImpl) Add(reqwgt *ReqWGT) error {
+	if b.reqwgt != nil {
 		return errors.New("Buffer is busy")
 	}
-	b.req = req
+	b.reqwgt = reqwgt
 	return nil
 }
 
-func (b *bufferImpl) Pop() (*Request, error) {
-	if b.req != nil {
+func (b *bufferImpl) Pop(popTime time.Time) (*Request, error) {
+	if b.reqwgt != nil {
 		return nil, errors.New("Buffer is empty")
 	}
-	tmp := b.req
-	b.req = nil
-	return tmp, nil
+	b.allProcessed = append(b.allProcessed, ReqSE{
+		Start: b.reqwgt.Time,
+		End:   popTime,
+		Req:   b.reqwgt.Req,
+	})
+	req := b.reqwgt.Req
+	b.reqwgt = nil
+	return req, nil
 }
