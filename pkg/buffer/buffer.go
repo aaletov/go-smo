@@ -13,8 +13,9 @@ type ReqSE = request.ReqSE
 
 type Buffer interface {
 	IsFree() bool
+	Get() *ReqWGT
 	Add(reqwgt *ReqWGT) error
-	Pop(popTime time.Time) (*Request, error)
+	Pop(popTime time.Time) error
 }
 
 var (
@@ -39,6 +40,10 @@ func (b bufferImpl) IsFree() bool {
 	return b.reqwgt == nil
 }
 
+func (b bufferImpl) Get() *ReqWGT {
+	return b.reqwgt
+}
+
 func (b *bufferImpl) Add(reqwgt *ReqWGT) error {
 	if b.reqwgt != nil {
 		return errors.New("Buffer is busy")
@@ -47,16 +52,15 @@ func (b *bufferImpl) Add(reqwgt *ReqWGT) error {
 	return nil
 }
 
-func (b *bufferImpl) Pop(popTime time.Time) (*Request, error) {
+func (b *bufferImpl) Pop(popTime time.Time) error {
 	if b.reqwgt != nil {
-		return nil, errors.New("Buffer is empty")
+		return errors.New("Buffer is empty")
 	}
 	b.allProcessed = append(b.allProcessed, ReqSE{
 		Start: b.reqwgt.Time,
 		End:   popTime,
 		Req:   b.reqwgt.Req,
 	})
-	req := b.reqwgt.Req
 	b.reqwgt = nil
-	return req, nil
+	return nil
 }

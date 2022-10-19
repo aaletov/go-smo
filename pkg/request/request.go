@@ -33,4 +33,7 @@ type ReqWGT = requestWithTime
 // Request with end of processing time
 type ReqWPT = requestWithTime
 
+// Request with reject time
+type ReqWRT = requestWithTime
+
 type ReqSE = requestWithStartEnd
