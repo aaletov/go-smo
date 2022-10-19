@@ -4,7 +4,7 @@ import (
 	"testing"
 )
 
-type TestInt int32
+type TestInt int
 
 func (t TestInt) Less(other Comparable) bool {
 	return t < other.(TestInt)
