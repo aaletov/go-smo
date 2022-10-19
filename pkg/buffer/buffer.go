@@ -1,33 +1,66 @@
 package buffer
 
 import (
+	"errors"
 	"time"
+
 	"github.com/aaletov/go-smo/pkg/request"
-	"github.com/aaletov/go-smo/pkg/queue"
 )
 
+type Request = request.Request
+type ReqWGT = request.ReqWGT
+type ReqSE = request.ReqSE
+
 type Buffer interface {
-	IsFree(moment time.Time) bool
-	Add(reqwgt request.ReqWGT) error
-	Pop() (request.ReqWGT, error)
+	IsFree() bool
+	Get() *ReqWGT
+	Add(reqwgt *ReqWGT) error
+	Pop(popTime time.Time) error
 }
 
-func NewBuffer() Buffer {
-	return &bufferImpl{}
+var (
+	bufCount int = 0
+)
+
+func NewBuffer(procTime time.Duration) Buffer {
+	bufCount++
+	return &bufferImpl{
+		bufNumber:    bufCount,
+		allProcessed: make([]ReqSE, 0),
+	}
 }
 
 type bufferImpl struct {
-	queue *queue.PriorityQueue[request.ReqWGT]
+	bufNumber    int
+	reqwgt       *ReqWGT
+	allProcessed []ReqSE
 }
 
-func (b bufferImpl) IsFree(moment time.Time) bool {
-	return false
+func (b bufferImpl) IsFree() bool {
+	return b.reqwgt == nil
 }
 
-func (b *bufferImpl) Add(reqwgt request.ReqWGT) error {
+func (b bufferImpl) Get() *ReqWGT {
+	return b.reqwgt
+}
+
+func (b *bufferImpl) Add(reqwgt *ReqWGT) error {
+	if b.reqwgt != nil {
+		return errors.New("Buffer is busy")
+	}
+	b.reqwgt = reqwgt
 	return nil
 }
 
-func (b *bufferImpl) Pop() (request.ReqWGT, error) {
-	return *new(request.ReqWGT), nil
+func (b *bufferImpl) Pop(popTime time.Time) error {
+	if b.reqwgt != nil {
+		return errors.New("Buffer is empty")
+	}
+	b.allProcessed = append(b.allProcessed, ReqSE{
+		Start: b.reqwgt.Time,
+		End:   popTime,
+		Req:   b.reqwgt.Req,
+	})
+	b.reqwgt = nil
+	return nil
 }
