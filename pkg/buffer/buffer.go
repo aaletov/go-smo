@@ -1,33 +1,54 @@
 package buffer
 
 import (
+	"errors"
 	"time"
+
 	"github.com/aaletov/go-smo/pkg/request"
-	"github.com/aaletov/go-smo/pkg/queue"
 )
 
+type Request = request.Request
+type ReqWGT = request.ReqWGT
+
 type Buffer interface {
-	IsFree(moment time.Time) bool
-	Add(reqwgt request.ReqWGT) error
-	Pop() (request.ReqWGT, error)
+	IsFree() bool
+	Add(req *Request) error
+	Pop() (*Request, error)
 }
 
-func NewBuffer() Buffer {
-	return &bufferImpl{}
+var (
+	bufCount int = 0
+)
+
+func NewBuffer(procTime time.Duration) Buffer {
+	bufCount++
+	return &bufferImpl{
+		bufNumber: bufCount,
+	}
 }
 
 type bufferImpl struct {
-	queue *queue.PriorityQueue[request.ReqWGT]
+	bufNumber int
+	req       *Request
 }
 
-func (b bufferImpl) IsFree(moment time.Time) bool {
-	return false
+func (b bufferImpl) IsFree() bool {
+	return b.req == nil
 }
 
-func (b *bufferImpl) Add(reqwgt request.ReqWGT) error {
+func (b *bufferImpl) Add(req *Request) error {
+	if req != nil {
+		return errors.New("Buffer is busy")
+	}
+	b.req = req
 	return nil
 }
 
-func (b *bufferImpl) Pop() (request.ReqWGT, error) {
-	return *new(request.ReqWGT), nil
+func (b *bufferImpl) Pop() (*Request, error) {
+	if b.req != nil {
+		return nil, errors.New("Buffer is empty")
+	}
+	tmp := b.req
+	b.req = nil
+	return tmp, nil
 }
