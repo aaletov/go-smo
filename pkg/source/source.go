@@ -10,7 +10,8 @@ import (
 )
 
 type Source interface {
-	GetRequest() *request.ReqWGT
+	Generate() *request.ReqWGT
+	GetGenerated() []request.ReqWGT
 }
 
 var (
@@ -43,7 +44,7 @@ type sourceImpl struct {
 	allGenerated  []request.ReqWGT
 }
 
-func (s *sourceImpl) GetRequest() *request.ReqWGT {
+func (s *sourceImpl) Generate() *request.ReqWGT {
 	duration := time.Duration(int64(s.gen.Rand()))
 	time := s.lastGenTime.Add(duration)
 	s.lastGenTime = time
@@ -57,4 +58,8 @@ func (s *sourceImpl) GetRequest() *request.ReqWGT {
 		Time: time,
 	})
 	return &request.ReqWGT{Req: &req, Time: time}
+}
+
+func (s sourceImpl) GetGenerated() []request.ReqWGT {
+	return s.allGenerated
 }

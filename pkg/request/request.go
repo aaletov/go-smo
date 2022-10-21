@@ -31,6 +31,9 @@ func (r requestWithTime) Less(other queue.Comparable) bool {
 // Request with generation time
 type ReqWGT = requestWithTime
 
+// Request with start time
+type ReqWST = requestWithTime
+
 // Request with end of processing time
 type ReqWPT requestWithStartEnd
 

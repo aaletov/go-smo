@@ -15,6 +15,7 @@ type QueueEl = queue.QueueElement[*ReqWGT]
 type SetManager interface {
 	Collect()
 	ToBuffer()
+	GetRejectList() []ReqWRT
 }
 
 func NewSetManager(sources []source.Source, buffers []buffer.Buffer) SetManager {
@@ -37,7 +38,7 @@ type setManagerImpl struct {
 
 func (s *setManagerImpl) Collect() {
 	for _, src := range s.sources {
-		s.reqQueue.Add(src.GetRequest())
+		s.reqQueue.Add(src.Generate())
 	}
 }
 
@@ -94,4 +95,8 @@ func (s *setManagerImpl) ToBuffer() {
 		s.buffers[s.bufPtr].Add(reqwgt)
 		s.bufPtr = (s.bufPtr + 1) % len(s.sources)
 	}
+}
+
+func (s setManagerImpl) GetRejectList() []ReqWRT {
+	return s.rejectList
 }

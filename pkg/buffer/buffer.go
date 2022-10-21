@@ -16,6 +16,7 @@ type Buffer interface {
 	Get() *ReqWGT
 	Add(reqwgt *ReqWGT) error
 	Pop(popTime time.Time) error
+	GetAllProcessed() []ReqSE
 }
 
 var (
@@ -63,4 +64,8 @@ func (b *bufferImpl) Pop(popTime time.Time) error {
 	})
 	b.reqwgt = nil
 	return nil
+}
+
+func (b bufferImpl) GetAllProcessed() []ReqSE {
+	return b.allProcessed
 }

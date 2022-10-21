@@ -18,5 +18,5 @@ func TestNewSource(t *testing.T) {
 
 func TestGetRequest(t *testing.T) {
 	source := getSource()
-	_ = source.GetRequest()
+	_ = source.Generate()
 }

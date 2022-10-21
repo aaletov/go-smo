@@ -10,13 +10,15 @@ import (
 type Request = request.Request
 type ReqWGT = request.ReqWGT
 type ReqWPT = request.ReqWPT
+type ReqWST = request.ReqWST
 
 type Device interface {
 	IsFree() bool
 	Add(req *ReqWGT) error
 	SetIdle()
 	GetStartTime() time.Time
-	Get() *Request
+	Get() *request.ReqWST
+	GetDone() []ReqWPT
 	Pop() error
 }
 
@@ -62,8 +64,12 @@ func (d *deviceImpl) Add(req *ReqWGT) error {
 	return nil
 }
 
-func (d deviceImpl) Get() *Request {
-	return d.req
+func (d deviceImpl) Get() *ReqWST {
+	return &ReqWST{Req: d.req, Time: d.lastStart}
+}
+
+func (d deviceImpl) GetDone() []ReqWPT {
+	return d.doneReqs
 }
 
 // Тут lastStart + duration
