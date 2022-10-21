@@ -1,19 +1,44 @@
 package main
 
 import (
-	"github.com/aaletov/go-smo/pkg/source"
+	"time"
+
 	"github.com/aaletov/go-smo/pkg/buffer"
-	smgr "github.com/aaletov/go-smo/pkg/set-manager"
-	"github.com/aaletov/go-smo/pkg/request"
+	cmgr "github.com/aaletov/go-smo/pkg/choice-manager"
+	"github.com/aaletov/go-smo/pkg/clock"
 	"github.com/aaletov/go-smo/pkg/device"
-	"github.com/aaletov/go-smo/pkg/queue"
+	smgr "github.com/aaletov/go-smo/pkg/set-manager"
+	"github.com/aaletov/go-smo/pkg/source"
+)
+
+const (
+	sourcesLambda = 13
+	sourcesCount  = 3
+	bufferCount   = 4
+	deviceCount   = 3
 )
 
 func main() {
-	_ = source.NewSource(0)
-	_ = buffer.NewBuffer()
-	_ = new(smgr.SetManager)
-	_ = new(request.Request)
-	_ = new(device.Device)
-	_ = new(queue.PriorityQueue[request.ReqWGT])
+	clock.InitClock(time.Now())
+	sources := make([]source.Source, sourcesCount)
+	for i := 0; i < sourcesCount; i++ {
+		sources[i] = source.NewSource(sourcesLambda)
+	}
+	buffers := make([]buffer.Buffer, bufferCount)
+	for i := 0; i < bufferCount; i++ {
+		buffers[i] = buffer.NewBuffer()
+	}
+	setManager := smgr.NewSetManager(sources, buffers)
+	devices := make([]device.Device, deviceCount)
+	for i := 0; i < deviceCount; i++ {
+		devDuration := time.Duration(1e10 * (10 + i))
+		devices[i] = device.NewDevice(clock.SMOClock.Time, devDuration)
+	}
+	choiceManager := cmgr.NewChoiceManager(buffers, devices)
+
+	for i := 0; i < 100; i++ {
+		setManager.Collect()
+		setManager.ToBuffer()
+		choiceManager.ToDevices()
+	}
 }
