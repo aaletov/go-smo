@@ -1,19 +1,26 @@
 package main
 
 import (
-	"github.com/aaletov/go-smo/pkg/source"
-	"github.com/aaletov/go-smo/pkg/buffer"
-	smgr "github.com/aaletov/go-smo/pkg/set-manager"
-	"github.com/aaletov/go-smo/pkg/request"
-	"github.com/aaletov/go-smo/pkg/device"
-	"github.com/aaletov/go-smo/pkg/queue"
+	"time"
+
+	"github.com/aaletov/go-smo/pkg/clock"
+	"github.com/aaletov/go-smo/pkg/system"
+)
+
+const (
+	sourcesLambda = 13
+	sourcesCount  = 3
+	bufferCount   = 4
+	devicesCount  = 3
 )
 
 func main() {
-	_ = source.NewSource(0)
-	_ = buffer.NewBuffer()
-	_ = new(smgr.SetManager)
-	_ = new(request.Request)
-	_ = new(device.Device)
-	_ = new(queue.PriorityQueue[request.ReqWGT])
+	clock.InitClock(time.Now())
+	sourcesLambda := time.Duration(1e9 * 11)
+	devDuration := time.Duration(1e10)
+	sys := system.NewSystem(3, 4, 3, sourcesLambda, devDuration)
+
+	for i := 0; i < 100; i++ {
+		sys.Iterate()
+	}
 }

@@ -46,7 +46,7 @@ func isNewest(queue Queue, el *QueueEl, sourcesCount int) bool {
 	matchedSrc := make([]bool, sourcesCount)
 	matchedSrcCount := 0
 	for ; el != nil; el = el.Next() {
-		src := el.Get().Req.SourceNumber
+		src := el.Get().Req.SourceNumber - 1
 		if !matchedSrc[src] {
 			matchedSrcCount++
 			matchedSrc[src] = true

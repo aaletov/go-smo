@@ -22,7 +22,7 @@ var (
 	bufCount int = 0
 )
 
-func NewBuffer(procTime time.Duration) Buffer {
+func NewBuffer() Buffer {
 	bufCount++
 	return &bufferImpl{
 		bufNumber:    bufCount,
