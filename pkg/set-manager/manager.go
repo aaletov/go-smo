@@ -9,8 +9,8 @@ import (
 
 type ReqWGT = request.ReqWGT
 type ReqWRT = request.ReqWRT
-type Queue = queue.PriorityQueue[ReqWGT]
-type QueueEl = queue.QueueElement[ReqWGT]
+type Queue = queue.PriorityQueue[*ReqWGT]
+type QueueEl = queue.QueueElement[*ReqWGT]
 
 type SetManager interface {
 	Collect()
@@ -22,7 +22,7 @@ func NewSetManager(sources []source.Source, buffers []buffer.Buffer) SetManager 
 		sources:    sources,
 		buffers:    buffers,
 		bufPtr:     0,
-		reqQueue:   queue.NewPriorityQueue[ReqWGT](),
+		reqQueue:   queue.NewPriorityQueue[*ReqWGT](),
 		rejectList: make([]ReqWGT, 0),
 	}
 }
@@ -37,8 +37,7 @@ type setManagerImpl struct {
 
 func (s *setManagerImpl) Collect() {
 	for _, src := range s.sources {
-		req, time := src.GetRequest()
-		s.reqQueue.Add(ReqWGT{Req: req, Time: time})
+		s.reqQueue.Add(src.GetRequest())
 	}
 }
 
@@ -87,12 +86,12 @@ func (s *setManagerImpl) ToBuffer() {
 			s.bufPtr = (s.bufPtr + 1) % len(s.sources)
 			if s.bufPtr == prevBufPtr {
 				reqwgt := el.Get()
-				s.reject(&reqwgt)
+				s.reject(reqwgt)
 				return
 			}
 		}
 		reqwgt := el.Get()
-		s.buffers[s.bufPtr].Add(&reqwgt)
+		s.buffers[s.bufPtr].Add(reqwgt)
 		s.bufPtr = (s.bufPtr + 1) % len(s.sources)
 	}
 }

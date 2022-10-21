@@ -1,6 +1,7 @@
 package request
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/aaletov/go-smo/pkg/queue"
@@ -37,3 +38,7 @@ type ReqWPT requestWithStartEnd
 type ReqWRT = requestWithTime
 
 type ReqSE = requestWithStartEnd
+
+func (r Request) String() string {
+	return "Request[" + strconv.Itoa(r.SourceNumber) + "." + strconv.Itoa(r.RequestNumber) + "]"
+}
