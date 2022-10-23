@@ -1,6 +1,8 @@
 package smgr
 
 import (
+	"errors"
+
 	"github.com/aaletov/go-smo/pkg/buffer"
 	"github.com/aaletov/go-smo/pkg/queue"
 	"github.com/aaletov/go-smo/pkg/request"
@@ -68,28 +70,49 @@ func (s setManagerImpl) currentBuf() buffer.Buffer {
 	return s.buffers[s.bufPtr]
 }
 
-func (s *setManagerImpl) reject(rwgt *ReqWGT) {
-	prevBufPtr := s.bufPtr
-	s.movePtr()
-	for ; s.bufPtr != prevBufPtr; s.movePtr() {
-		bufRwgt := s.currentBuf().Get()
-		if rwgt.Req.SourceNumber < bufRwgt.Req.SourceNumber {
-			s.currentBuf().Pop(rwgt.Time)
-			s.rejectList = append(s.rejectList, ReqSE{
-				Req:   bufRwgt.Req,
-				Start: bufRwgt.Time,
-				End:   rwgt.Time,
-			})
-			s.currentBuf().Add(rwgt)
+func (s *setManagerImpl) handleReject(rwgt *ReqWGT) {
+	rwgtToBufPtr := make(map[*ReqWGT]int)
+	rwgtSlice := make([]*ReqWGT, 0)
+	for i, b := range s.buffers {
+		if !b.IsFree() {
+			rwgtToBufPtr[b.Get()] = i
+			rwgtSlice = append(rwgtSlice, b.Get())
 		}
 	}
-	if s.bufPtr == prevBufPtr {
+	minPriorRwgt := rwgtSlice[0]
+	for _, currRwgt := range rwgtSlice {
+		if currRwgt.Req.SourceNumber > minPriorRwgt.Req.SourceNumber {
+			minPriorRwgt = currRwgt
+		}
+	}
+	if minPriorRwgt.Req.SourceNumber > rwgt.Req.SourceNumber {
+		// reject minPrior
+		bufPtr := rwgtToBufPtr[minPriorRwgt]
+		bufRwgt := s.buffers[bufPtr].Get()
+		s.buffers[bufPtr].Pop(rwgt.Time)
+		s.rejectList = append(s.rejectList, ReqSE{
+			Req:   bufRwgt.Req,
+			Start: bufRwgt.Time,
+			End:   rwgt.Time,
+		})
+		s.buffers[bufPtr].Add(rwgt)
+	} else {
+		// reject rwgt
 		s.rejectList = append(s.rejectList, ReqSE{
 			Req:   rwgt.Req,
 			Start: rwgt.Time,
 			End:   rwgt.Time,
 		})
 	}
+}
+
+func (s *setManagerImpl) movePtrToFreeBuf() error {
+	for prevBufPtr := s.bufPtr; prevBufPtr != s.bufPtr; s.movePtr() {
+		if s.currentBuf().IsFree() {
+			return nil
+		}
+	}
+	return errors.New("No free buffers in system")
 }
 
 func (s *setManagerImpl) Iterate() {
@@ -99,22 +122,18 @@ func (s *setManagerImpl) Iterate() {
 		if !isNewest(s.reqQueue, el, len(s.sources)) {
 			break
 		}
-		prevBufPtr := s.bufPtr
-		for !s.buffers[s.bufPtr].IsFree() {
-			s.bufPtr = (s.bufPtr + 1) % len(s.sources)
-			if s.bufPtr == prevBufPtr {
-				reqwgt := el.Get()
-				s.reject(reqwgt)
-				return
-			}
+		rwgt := el.Get()
+		err := s.movePtrToFreeBuf()
+		if err != nil {
+			s.handleReject(rwgt)
+		} else {
+			s.buffers[s.bufPtr].Add(rwgt)
+			s.buffers[s.bufPtr].Pop(rwgt.Time)
+			s.movePtr()
 		}
-		reqwgt := el.Get()
-		s.buffers[s.bufPtr].Add(reqwgt)
-		s.buffers[s.bufPtr].Pop(reqwgt.Time)
-		s.bufPtr = (s.bufPtr + 1) % len(s.sources)
 	}
 }
 
-func (s setManagerImpl) GetRejectList() []ReqWRT {
+func (s setManagerImpl) GetRejectList() []ReqSE {
 	return s.rejectList
 }
