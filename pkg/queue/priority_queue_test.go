@@ -23,15 +23,6 @@ func TestEmptyAdd(t *testing.T) {
 	}
 }
 
-func TestEmptyPush(t *testing.T) {
-	queue := NewPriorityQueue[TestInt]()
-	queue.Push(1)
-	last := queue.Back().Get()
-	if last != 1 {
-		t.Fatalf("Expected %v, got %v", 1, last)
-	}
-}
-
 func TestEmptyBack(t *testing.T) {
 	queue := NewPriorityQueue[TestInt]()
 	if queue.Back() != nil {
@@ -71,16 +62,6 @@ func TestFront(t *testing.T) {
 	assertBackValue := elements[0]
 	if queueBackValue != assertBackValue {
 		t.Fatalf("queue.Back().Get() returned %v instead of %v", queueBackValue, assertBackValue)
-	}
-}
-
-func TestPush(t *testing.T) {
-	queue := getQueue()
-	backValue := queue.Back().Get()
-	newValue := backValue + 1
-	queue.Push(newValue)
-	if queue.Back().Get() != newValue {
-		t.Fatalf("queue.Back().Get() returned %v instead of %v", queue.Back().Get(), newValue)
 	}
 }
 

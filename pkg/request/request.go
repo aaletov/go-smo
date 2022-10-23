@@ -42,6 +42,10 @@ type ReqWRT = requestWithTime
 
 type ReqSE = requestWithStartEnd
 
+func (r requestWithTime) String() string {
+	return r.Req.String() + "WithTime[" + r.Time.String() + "]"
+}
+
 func (r Request) String() string {
 	return "Req[" + strconv.Itoa(r.SourceNumber) + "." + strconv.Itoa(r.RequestNumber) + "]"
 }

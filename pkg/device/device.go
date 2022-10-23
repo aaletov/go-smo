@@ -4,6 +4,7 @@ import (
 	"errors"
 	"time"
 
+	"github.com/aaletov/go-smo/pkg/events"
 	"github.com/aaletov/go-smo/pkg/request"
 )
 
@@ -21,6 +22,7 @@ type Device interface {
 	GetDone() []ReqWPT
 	Pop() error
 	GetNumber() int
+	GetNextEvent() *events.DevFreeEvent
 }
 
 var (
@@ -45,6 +47,7 @@ type deviceImpl struct {
 	idle         bool
 	lastStart    time.Time
 	doneReqs     []ReqWPT
+	nextEvent    *events.DevFreeEvent
 }
 
 func (d deviceImpl) IsFree() bool {
@@ -65,9 +68,16 @@ func (d *deviceImpl) Add(req *ReqWGT) error {
 	}
 	if d.idle {
 		d.lastStart = req.Time
+	} else {
+		d.lastStart = d.lastStart.Add(d.pTime)
 	}
 	d.req = req.Req
 	d.idle = false
+
+	d.nextEvent = &events.DevFreeEvent{
+		Time:   d.lastStart.Add(d.pTime),
+		DevNum: d.deviceNumber,
+	}
 
 	return nil
 }
@@ -92,11 +102,19 @@ func (d *deviceImpl) Pop() error {
 		End:   endTime,
 	}
 	d.doneReqs = append(d.doneReqs, reqwpt)
-	d.lastStart = endTime
 	d.req = nil
+	d.nextEvent = nil
 	return nil
 }
 
 func (d deviceImpl) GetNumber() int {
 	return d.deviceNumber
+}
+
+func (d deviceImpl) GetNextEvent() *events.DevFreeEvent {
+	event := d.nextEvent
+	if event != nil {
+		d.nextEvent = nil
+	}
+	return event
 }

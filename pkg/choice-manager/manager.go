@@ -1,16 +1,17 @@
 package cmgr
 
 import (
-	"fmt"
 	"sort"
 
 	"github.com/aaletov/go-smo/pkg/buffer"
 	"github.com/aaletov/go-smo/pkg/device"
+	"github.com/aaletov/go-smo/pkg/events"
 	"github.com/aaletov/go-smo/pkg/request"
 )
 
 type ChoiceManager interface {
-	Iterate()
+	HandleGenReqEvent(*events.GenReqEvent)
+	HandleDevFreeEvent(*events.DevFreeEvent)
 }
 
 func NewChoiceManager(buffers []buffer.Buffer, devices []device.Device) ChoiceManager {
@@ -27,7 +28,7 @@ type choiceManagerImpl struct {
 	bufPtr  int
 }
 
-func (c *choiceManagerImpl) Iterate() {
+func (c *choiceManagerImpl) toDevices() {
 	reqToBuf := make(map[*request.ReqWGT]int, 0)
 	reqwgtSlice := make([]*buffer.ReqWGT, 0)
 	for i, b := range c.buffers {
@@ -42,13 +43,13 @@ func (c *choiceManagerImpl) Iterate() {
 		return (iSource < jSource) || ((iSource == jSource) &&
 			(reqwgtSlice[i].Req.RequestNumber < reqwgtSlice[j].Req.RequestNumber))
 	})
+
 	for _, device := range c.devices {
 		if device.IsFree() {
 			if len(reqwgtSlice) != 0 {
 				reqwgt := reqwgtSlice[0]
 				device.Add(reqwgt)
 				bufNum := reqToBuf[reqwgt]
-				fmt.Println("Pop")
 				c.buffers[bufNum].Pop(device.GetStartTime())
 				reqwgtSlice = reqwgtSlice[1:]
 			} else {
@@ -56,12 +57,13 @@ func (c *choiceManagerImpl) Iterate() {
 			}
 		}
 	}
-	// for _, reqwgt := range reqwgtSlice {
-	// 	for _, device := range c.devices {
-	// 		if device.IsFree() {
-	// 			device.Add(reqwgt)
-	// 			break
-	// 		}
-	// 	}
-	// }
+}
+
+func (c *choiceManagerImpl) HandleGenReqEvent(event *events.GenReqEvent) {
+	c.toDevices()
+}
+
+func (c *choiceManagerImpl) HandleDevFreeEvent(event *events.DevFreeEvent) {
+	c.devices[event.DevNum-1].Pop()
+	c.toDevices()
 }

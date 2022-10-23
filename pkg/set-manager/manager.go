@@ -4,19 +4,16 @@ import (
 	"errors"
 
 	"github.com/aaletov/go-smo/pkg/buffer"
-	"github.com/aaletov/go-smo/pkg/queue"
 	"github.com/aaletov/go-smo/pkg/request"
 	"github.com/aaletov/go-smo/pkg/source"
 )
 
 type ReqWGT = request.ReqWGT
 type ReqSE = request.ReqSE
-type Queue = queue.PriorityQueue[*ReqWGT]
-type QueueEl = queue.QueueElement[*ReqWGT]
 
 type SetManager interface {
-	Iterate()
 	GetRejectList() []ReqSE
+	ProcessSource(sourceNum int)
 }
 
 func NewSetManager(sources []source.Source, buffers []buffer.Buffer) SetManager {
@@ -24,7 +21,6 @@ func NewSetManager(sources []source.Source, buffers []buffer.Buffer) SetManager 
 		sources:    sources,
 		buffers:    buffers,
 		bufPtr:     0,
-		reqQueue:   queue.NewPriorityQueue[*ReqWGT](),
 		rejectList: make([]ReqSE, 0),
 	}
 }
@@ -33,33 +29,7 @@ type setManagerImpl struct {
 	sources    []source.Source
 	buffers    []buffer.Buffer
 	bufPtr     int
-	reqQueue   Queue
 	rejectList []ReqSE
-}
-
-func (s *setManagerImpl) collectReqs() {
-	for _, src := range s.sources {
-		s.reqQueue.Add(src.Generate())
-	}
-}
-
-// isNewest() determines are all other sources have generated their reqs after
-// passed req. Returnes false if not all of other sources have generated next
-// request
-func isNewest(queue Queue, el *QueueEl, sourcesCount int) bool {
-	matchedSrc := make([]bool, sourcesCount)
-	matchedSrcCount := 0
-	for ; el != nil; el = el.Next() {
-		src := el.Get().Req.SourceNumber - 1
-		if !matchedSrc[src] {
-			matchedSrcCount++
-			matchedSrc[src] = true
-		}
-		if matchedSrcCount == sourcesCount {
-			return true
-		}
-	}
-	return false
 }
 
 func (s *setManagerImpl) movePtr() {
@@ -115,6 +85,9 @@ func (s *setManagerImpl) handleReject(rwgt *ReqWGT) {
 }
 
 func (s *setManagerImpl) movePtrToFreeBuf() error {
+	if s.currentBuf().IsFree() {
+		return nil
+	}
 	prevBufPtr := s.bufPtr
 	s.movePtr()
 	for ; prevBufPtr != s.bufPtr; s.movePtr() {
@@ -125,24 +98,17 @@ func (s *setManagerImpl) movePtrToFreeBuf() error {
 	return errors.New("No free buffers in system")
 }
 
-func (s *setManagerImpl) Iterate() {
-	s.collectReqs()
-
-	for el := s.reqQueue.Front(); el != nil; el = el.Next() {
-		if !isNewest(s.reqQueue, el, len(s.sources)) {
-			break
-		}
-		rwgt := el.Get()
-		err := s.movePtrToFreeBuf()
-		if err != nil {
-			s.handleReject(rwgt)
-		} else {
-			s.buffers[s.bufPtr].Add(rwgt)
-		}
-		s.reqQueue.Pop()
-	}
-}
-
 func (s setManagerImpl) GetRejectList() []ReqSE {
 	return s.rejectList
+}
+
+func (s *setManagerImpl) ProcessSource(sourceNum int) {
+	rwgt := s.sources[sourceNum-1].Generate()
+	err := s.movePtrToFreeBuf()
+	if err != nil {
+		s.handleReject(rwgt)
+	} else {
+		s.currentBuf().Add(rwgt)
+		s.movePtr()
+	}
 }
