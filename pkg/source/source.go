@@ -1,6 +1,7 @@
 package source
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/aaletov/go-smo/pkg/clock"
@@ -27,8 +28,7 @@ var (
 func NewSource(logger *logrus.Logger, lambda time.Duration) Source {
 	sourcesCount++
 	ll := logger.WithFields(logrus.Fields{
-		"component": "Source",
-		"compNum":   sourcesCount,
+		"component": fmt.Sprintf("Source #%v", sourcesCount),
 	})
 
 	return &sourceImpl{

@@ -37,7 +37,7 @@ func NewSystem(sourcesCount, buffersCount, devicesCount int, sourcesLambda, devD
 	logger := logrus.New()
 	logger.SetFormatter(&nested.Formatter{
 		HideKeys:    true,
-		FieldsOrder: []string{"component", "compNum", "method"},
+		FieldsOrder: []string{"component", "method"},
 	})
 	sources := make([]source.Source, sourcesCount)
 	for i := 0; i < sourcesCount; i++ {
@@ -45,7 +45,7 @@ func NewSystem(sourcesCount, buffersCount, devicesCount int, sourcesLambda, devD
 	}
 	buffers := make([]buffer.Buffer, buffersCount)
 	for i := 0; i < buffersCount; i++ {
-		buffers[i] = buffer.NewBuffer()
+		buffers[i] = buffer.NewBuffer(logger)
 	}
 	setManager := smgr.NewSetManager(sources, buffers)
 	devices := make([]device.Device, devicesCount)
