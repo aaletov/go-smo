@@ -162,8 +162,20 @@ func (s System) printDevTable() {
 	devTable.Render()
 }
 
+func (s System) printReject() {
+	rejTable := table.NewWriter()
+	rejTable.SetOutputMirror(os.Stdout)
+	rejRow := []any{"Reject"}
+	for _, rwse := range s.SetMgr.GetRejectList() {
+		rejRow = append(rejRow, rwse.Req.String())
+	}
+	rejTable.AppendRow(rejRow)
+	rejTable.Render()
+}
+
 func (s System) PrintData() {
 	s.printSourcesTable()
 	s.printBuffersTable()
 	s.printDevTable()
+	s.printReject()
 }
