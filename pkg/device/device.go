@@ -4,8 +4,11 @@ import (
 	"errors"
 	"time"
 
+	"golang.org/x/exp/rand"
+
 	"github.com/aaletov/go-smo/pkg/events"
 	"github.com/aaletov/go-smo/pkg/request"
+	"github.com/aaletov/go-smo/pkg/source"
 )
 
 type Request = request.Request
@@ -29,11 +32,13 @@ var (
 	deviceCount = 0
 )
 
-func NewDevice(startTime time.Time, pTime time.Duration) Device {
+func NewDevice(startTime time.Time, a, b time.Duration) Device {
 	deviceCount++
 	return &deviceImpl{
 		deviceNumber: deviceCount,
-		pTime:        pTime,
+		a:            int64(a),
+		b:            int64(b),
+		rand:         rand.New(source.RandSource),
 		lastStart:    startTime,
 		idle:         true,
 		doneReqs:     make([]ReqWPT, 0),
@@ -42,12 +47,18 @@ func NewDevice(startTime time.Time, pTime time.Duration) Device {
 
 type deviceImpl struct {
 	deviceNumber int
-	pTime        time.Duration
+	a, b         int64
+	rand         *rand.Rand
 	req          *Request
 	idle         bool
 	lastStart    time.Time
+	lastDuration time.Duration
 	doneReqs     []ReqWPT
 	nextEvent    *events.DevFreeEvent
+}
+
+func (d deviceImpl) genDuration() time.Duration {
+	return time.Duration(d.a + (d.b-d.a)*rand.Int63())
 }
 
 func (d deviceImpl) IsFree() bool {
@@ -66,16 +77,18 @@ func (d *deviceImpl) Add(req *ReqWGT) error {
 	if d.req != nil {
 		return errors.New("Device is busy")
 	}
+
 	if d.idle {
 		d.lastStart = req.Time
 	} else {
-		d.lastStart = d.lastStart.Add(d.pTime)
+		d.lastStart = d.lastStart.Add(d.lastDuration)
 	}
+	d.lastDuration = d.genDuration()
 	d.req = req.Req
 	d.idle = false
 
 	d.nextEvent = &events.DevFreeEvent{
-		Time:   d.lastStart.Add(d.pTime),
+		Time:   d.lastStart.Add(d.lastDuration),
 		DevNum: d.deviceNumber,
 	}
 
@@ -95,7 +108,7 @@ func (d *deviceImpl) Pop() error {
 	if d.req == nil {
 		return errors.New("No request in device")
 	}
-	endTime := d.lastStart.Add(d.pTime)
+	endTime := d.lastStart.Add(d.lastDuration)
 	reqwpt := ReqWPT{
 		Req:   d.req,
 		Start: d.lastStart,

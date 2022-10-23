@@ -17,8 +17,9 @@ const (
 func main() {
 	clock.InitClock(time.Now())
 	sourcesLambda := time.Duration(1e12 * 11)
-	devDuration := time.Duration(1e10)
-	sys := system.NewSystem(3, 4, 3, sourcesLambda, devDuration)
+	devA := time.Duration(1e10)
+	devB := time.Duration(1e11)
+	sys := system.NewSystem(3, 4, 3, sourcesLambda, devA, devB)
 
 	for i := 0; i < 10; i++ {
 		sys.Iterate()

@@ -21,7 +21,7 @@ type Source interface {
 
 var (
 	sourcesCount int = 0
-	randSource       = rand.NewSource(uint64(time.Now().UnixNano()))
+	RandSource       = rand.NewSource(uint64(time.Now().UnixNano()))
 )
 
 // Lambda is an expected value of time passed until next req
@@ -39,7 +39,7 @@ func NewSource(logger *logrus.Logger, lambda time.Duration) Source {
 		lambda:        lambda,
 		gen: distuv.Poisson{
 			Lambda: float64(lambda),
-			Src:    randSource,
+			Src:    RandSource,
 		},
 		allGenerated: make([]request.ReqWGT, 0),
 	}

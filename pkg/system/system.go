@@ -33,7 +33,7 @@ type System struct {
 	Events    Queue
 }
 
-func NewSystem(sourcesCount, buffersCount, devicesCount int, sourcesLambda, devDuration time.Duration) *System {
+func NewSystem(sourcesCount, buffersCount, devicesCount int, sourcesLambda, devA, devB time.Duration) *System {
 	logger := logrus.New()
 	logger.SetFormatter(&nested.Formatter{
 		HideKeys:    true,
@@ -50,8 +50,7 @@ func NewSystem(sourcesCount, buffersCount, devicesCount int, sourcesLambda, devD
 	setManager := smgr.NewSetManager(sources, buffers)
 	devices := make([]device.Device, devicesCount)
 	for i := 0; i < devicesCount; i++ {
-		devDuration := time.Duration(1e9 * (10 + i))
-		devices[i] = device.NewDevice(clock.SMOClock.Time, devDuration)
+		devices[i] = device.NewDevice(clock.SMOClock.Time, devA, devB)
 	}
 	choiceManager := cmgr.NewChoiceManager(buffers, devices)
 
