@@ -11,6 +11,7 @@ import (
 
 type Source interface {
 	Generate() *request.ReqWGT
+	GetNumber() int
 	GetGenerated() []request.ReqWGT
 }
 
@@ -58,6 +59,10 @@ func (s *sourceImpl) Generate() *request.ReqWGT {
 		Time: time,
 	})
 	return &request.ReqWGT{Req: &req, Time: time}
+}
+
+func (s sourceImpl) GetNumber() int {
+	return s.sourceNumber
 }
 
 func (s sourceImpl) GetGenerated() []request.ReqWGT {

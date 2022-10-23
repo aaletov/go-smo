@@ -20,7 +20,8 @@ func main() {
 	devDuration := time.Duration(1e10)
 	sys := system.NewSystem(3, 4, 3, sourcesLambda, devDuration)
 
-	for i := 0; i < 100; i++ {
+	for i := 0; i < 5; i++ {
 		sys.Iterate()
+		sys.PrintData()
 	}
 }

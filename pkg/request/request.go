@@ -24,7 +24,7 @@ type requestWithStartEnd struct {
 }
 
 func (r requestWithTime) Less(other queue.Comparable) bool {
-	otherR := other.(ReqWGT)
+	otherR := other.(*ReqWGT)
 	return r.Time.Before(otherR.Time)
 }
 
@@ -43,5 +43,5 @@ type ReqWRT = requestWithTime
 type ReqSE = requestWithStartEnd
 
 func (r Request) String() string {
-	return "Request[" + strconv.Itoa(r.SourceNumber) + "." + strconv.Itoa(r.RequestNumber) + "]"
+	return "Req[" + strconv.Itoa(r.SourceNumber) + "." + strconv.Itoa(r.RequestNumber) + "]"
 }

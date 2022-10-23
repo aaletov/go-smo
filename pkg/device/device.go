@@ -20,23 +20,31 @@ type Device interface {
 	Get() *request.ReqWST
 	GetDone() []ReqWPT
 	Pop() error
+	GetNumber() int
 }
 
+var (
+	deviceCount = 0
+)
+
 func NewDevice(startTime time.Time, pTime time.Duration) Device {
+	deviceCount++
 	return &deviceImpl{
-		pTime:     pTime,
-		lastStart: startTime,
-		idle:      true,
-		doneReqs:  make([]ReqWPT, 0),
+		deviceNumber: deviceCount,
+		pTime:        pTime,
+		lastStart:    startTime,
+		idle:         true,
+		doneReqs:     make([]ReqWPT, 0),
 	}
 }
 
 type deviceImpl struct {
-	pTime     time.Duration
-	req       *Request
-	idle      bool
-	lastStart time.Time
-	doneReqs  []ReqWPT
+	deviceNumber int
+	pTime        time.Duration
+	req          *Request
+	idle         bool
+	lastStart    time.Time
+	doneReqs     []ReqWPT
 }
 
 func (d deviceImpl) IsFree() bool {
@@ -87,4 +95,8 @@ func (d *deviceImpl) Pop() error {
 	d.lastStart = endTime
 	d.req = nil
 	return nil
+}
+
+func (d deviceImpl) GetNumber() int {
+	return d.deviceNumber
 }

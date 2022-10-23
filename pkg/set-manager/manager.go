@@ -79,6 +79,14 @@ func (s *setManagerImpl) handleReject(rwgt *ReqWGT) {
 			rwgtSlice = append(rwgtSlice, b.Get())
 		}
 	}
+	if len(rwgtSlice) == 0 {
+		s.rejectList = append(s.rejectList, ReqSE{
+			Req:   rwgt.Req,
+			Start: rwgt.Time,
+			End:   rwgt.Time,
+		})
+		return
+	}
 	minPriorRwgt := rwgtSlice[0]
 	for _, currRwgt := range rwgtSlice {
 		if currRwgt.Req.SourceNumber > minPriorRwgt.Req.SourceNumber {
@@ -107,7 +115,9 @@ func (s *setManagerImpl) handleReject(rwgt *ReqWGT) {
 }
 
 func (s *setManagerImpl) movePtrToFreeBuf() error {
-	for prevBufPtr := s.bufPtr; prevBufPtr != s.bufPtr; s.movePtr() {
+	prevBufPtr := s.bufPtr
+	s.movePtr()
+	for ; prevBufPtr != s.bufPtr; s.movePtr() {
 		if s.currentBuf().IsFree() {
 			return nil
 		}
@@ -128,9 +138,8 @@ func (s *setManagerImpl) Iterate() {
 			s.handleReject(rwgt)
 		} else {
 			s.buffers[s.bufPtr].Add(rwgt)
-			s.buffers[s.bufPtr].Pop(rwgt.Time)
-			s.movePtr()
 		}
+		s.reqQueue.Pop()
 	}
 }
 

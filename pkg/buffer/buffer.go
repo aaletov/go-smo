@@ -2,6 +2,7 @@ package buffer
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"github.com/aaletov/go-smo/pkg/request"
@@ -17,6 +18,7 @@ type Buffer interface {
 	Add(reqwgt *ReqWGT) error
 	Pop(popTime time.Time) error
 	GetAllProcessed() []ReqSE
+	GetNumber() int
 }
 
 var (
@@ -54,9 +56,10 @@ func (b *bufferImpl) Add(reqwgt *ReqWGT) error {
 }
 
 func (b *bufferImpl) Pop(popTime time.Time) error {
-	if b.reqwgt != nil {
+	if b.reqwgt == nil {
 		return errors.New("Buffer is empty")
 	}
+	fmt.Println("Pop (buffer)")
 	b.allProcessed = append(b.allProcessed, ReqSE{
 		Start: b.reqwgt.Time,
 		End:   popTime,
@@ -68,4 +71,8 @@ func (b *bufferImpl) Pop(popTime time.Time) error {
 
 func (b bufferImpl) GetAllProcessed() []ReqSE {
 	return b.allProcessed
+}
+
+func (b bufferImpl) GetNumber() int {
+	return b.bufNumber
 }
