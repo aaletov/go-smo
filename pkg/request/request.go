@@ -1,6 +1,7 @@
 package request
 
 import (
+	"strconv"
 	"time"
 
 	"github.com/aaletov/go-smo/pkg/queue"
@@ -23,12 +24,15 @@ type requestWithStartEnd struct {
 }
 
 func (r requestWithTime) Less(other queue.Comparable) bool {
-	otherR := other.(ReqWGT)
+	otherR := other.(*ReqWGT)
 	return r.Time.Before(otherR.Time)
 }
 
 // Request with generation time
 type ReqWGT = requestWithTime
+
+// Request with start time
+type ReqWST = requestWithTime
 
 // Request with end of processing time
 type ReqWPT requestWithStartEnd
@@ -37,3 +41,11 @@ type ReqWPT requestWithStartEnd
 type ReqWRT = requestWithTime
 
 type ReqSE = requestWithStartEnd
+
+func (r requestWithTime) String() string {
+	return r.Req.String() + "WithTime[" + r.Time.String() + "]"
+}
+
+func (r Request) String() string {
+	return "Req[" + strconv.Itoa(r.SourceNumber) + "." + strconv.Itoa(r.RequestNumber) + "]"
+}

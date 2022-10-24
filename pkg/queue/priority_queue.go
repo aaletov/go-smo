@@ -10,7 +10,6 @@ type Comparable interface {
 }
 
 type PriorityQueue[T Comparable] interface {
-	Push(value T) error
 	Front() *QueueElement[T]
 	Back() *QueueElement[T]
 	Add(value T)
@@ -48,7 +47,7 @@ func NewPriorityQueue[T Comparable]() PriorityQueue[T] {
 	return &orderedList[T]{list}
 }
 
-func (l *orderedList[T]) Push(value T) error {
+func (l *orderedList[T]) push(value T) error {
 	back := l.list.Back()
 	if (back == nil) || back.Value.(T).Less(value) {
 		l.list.PushBack(value)
@@ -74,6 +73,10 @@ func (l orderedList[T]) Back() *QueueElement[T] {
 
 func (l *orderedList[T]) Add(value T) {
 	for el := l.Front(); el != nil; el = el.Next() {
+		elValue := el.Get()
+		if !elValue.Less(value) && !value.Less(elValue) {
+			return
+		}
 		if value.Less(el.Get()) {
 			l.list.InsertBefore(value, el.ListElement)
 			return
