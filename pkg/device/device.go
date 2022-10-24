@@ -124,7 +124,7 @@ func (d deviceImpl) GetNumber() int {
 	return d.deviceNumber
 }
 
-func (d deviceImpl) GetNextEvent() *events.DevFreeEvent {
+func (d *deviceImpl) GetNextEvent() *events.DevFreeEvent {
 	event := d.nextEvent
 	if event != nil {
 		d.nextEvent = nil
