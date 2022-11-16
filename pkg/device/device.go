@@ -6,22 +6,22 @@ import (
 
 	"golang.org/x/exp/rand"
 
+	"github.com/aaletov/go-smo/api"
 	"github.com/aaletov/go-smo/pkg/events"
-	"github.com/aaletov/go-smo/pkg/request"
 	"github.com/aaletov/go-smo/pkg/source"
 )
 
-type Request = request.Request
-type ReqWGT = request.ReqWGT
-type ReqWPT = request.ReqWPT
-type ReqWST = request.ReqWST
+type Request = api.Request
+type ReqWGT = api.ReqWGT
+type ReqWPT = api.ReqWPT
+type ReqWST = api.ReqWST
 
 type Device interface {
 	IsFree() bool
 	Add(req *ReqWGT) error
 	SetIdle()
 	GetStartTime() time.Time
-	Get() *request.ReqWST
+	Get() *api.ReqWST
 	GetDone() []ReqWPT
 	Pop() error
 	GetNumber() int
@@ -49,7 +49,7 @@ type deviceImpl struct {
 	deviceNumber int
 	a, b         int64
 	rand         *rand.Rand
-	req          *Request
+	req          *api.Request
 	idle         bool
 	lastStart    time.Time
 	lastDuration time.Duration
@@ -79,12 +79,12 @@ func (d *deviceImpl) Add(req *ReqWGT) error {
 	}
 
 	if d.idle {
-		d.lastStart = req.Time
+		d.lastStart = *req.Time
 	} else {
 		d.lastStart = d.lastStart.Add(d.lastDuration)
 	}
 	d.lastDuration = d.genDuration()
-	d.req = req.Req
+	d.req = req.Request
 	d.idle = false
 
 	d.nextEvent = &events.DevFreeEvent{
@@ -96,7 +96,7 @@ func (d *deviceImpl) Add(req *ReqWGT) error {
 }
 
 func (d deviceImpl) Get() *ReqWST {
-	return &ReqWST{Req: d.req, Time: d.lastStart}
+	return &ReqWST{Request: d.req, Time: &d.lastStart}
 }
 
 func (d deviceImpl) GetDone() []ReqWPT {
@@ -110,9 +110,9 @@ func (d *deviceImpl) Pop() error {
 	}
 	endTime := d.lastStart.Add(d.lastDuration)
 	reqwpt := ReqWPT{
-		Req:   d.req,
-		Start: d.lastStart,
-		End:   endTime,
+		Request: d.req,
+		Start:   &d.lastStart,
+		End:     &endTime,
 	}
 	d.doneReqs = append(d.doneReqs, reqwpt)
 	d.req = nil

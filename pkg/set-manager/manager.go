@@ -3,20 +3,20 @@ package smgr
 import (
 	"errors"
 
+	"github.com/aaletov/go-smo/api"
 	"github.com/aaletov/go-smo/pkg/buffer"
 	"github.com/aaletov/go-smo/pkg/events"
 	"github.com/aaletov/go-smo/pkg/queue"
-	"github.com/aaletov/go-smo/pkg/request"
 	"github.com/aaletov/go-smo/pkg/source"
 	"github.com/sirupsen/logrus"
 )
 
-type ReqWGT = request.ReqWGT
-type ReqSE = request.ReqSE
+type ReqWGT = api.ReqWGT
+type ReqWSE = api.ReqWSE
 
 type SetManager interface {
 	GetEventFromSource(sourceNum int)
-	GetRejectList() []ReqSE
+	GetRejectList() []ReqWSE
 	ProcessSource(sourceNum int)
 }
 
@@ -32,7 +32,7 @@ func NewSetManager(logger *logrus.Logger, sources []source.Source, buffers []buf
 		sources:    sources,
 		buffers:    buffers,
 		bufPtr:     0,
-		rejectList: make([]ReqSE, 0),
+		rejectList: make([]ReqWSE, 0),
 		events:     events,
 	}
 }
@@ -42,7 +42,7 @@ type setManagerImpl struct {
 	sources    []source.Source
 	buffers    []buffer.Buffer
 	bufPtr     int
-	rejectList []ReqSE
+	rejectList []ReqWSE
 	events     Queue
 }
 
@@ -64,36 +64,36 @@ func (s *setManagerImpl) handleReject(rwgt *ReqWGT) {
 		}
 	}
 	if len(rwgtSlice) == 0 {
-		s.rejectList = append(s.rejectList, ReqSE{
-			Req:   rwgt.Req,
-			Start: rwgt.Time,
-			End:   rwgt.Time,
+		s.rejectList = append(s.rejectList, ReqWSE{
+			Request: rwgt.Request,
+			Start:   rwgt.Time,
+			End:     rwgt.Time,
 		})
 		return
 	}
 	minPriorRwgt := rwgtSlice[0]
 	for _, currRwgt := range rwgtSlice {
-		if currRwgt.Req.SourceNumber > minPriorRwgt.Req.SourceNumber {
+		if *currRwgt.Request.SourceNumber > *minPriorRwgt.Request.SourceNumber {
 			minPriorRwgt = currRwgt
 		}
 	}
-	if minPriorRwgt.Req.SourceNumber > rwgt.Req.SourceNumber {
+	if *minPriorRwgt.Request.SourceNumber > *rwgt.Request.SourceNumber {
 		// reject minPrior
 		bufPtr := rwgtToBufPtr[minPriorRwgt]
 		bufRwgt := s.buffers[bufPtr].Get()
-		s.buffers[bufPtr].Pop(rwgt.Time)
-		s.rejectList = append(s.rejectList, ReqSE{
-			Req:   bufRwgt.Req,
-			Start: bufRwgt.Time,
-			End:   rwgt.Time,
+		s.buffers[bufPtr].Pop(*rwgt.Time)
+		s.rejectList = append(s.rejectList, ReqWSE{
+			Request: bufRwgt.Request,
+			Start:   bufRwgt.Time,
+			End:     rwgt.Time,
 		})
 		s.buffers[bufPtr].Add(rwgt)
 	} else {
 		// reject rwgt
-		s.rejectList = append(s.rejectList, ReqSE{
-			Req:   rwgt.Req,
-			Start: rwgt.Time,
-			End:   rwgt.Time,
+		s.rejectList = append(s.rejectList, ReqWSE{
+			Request: rwgt.Request,
+			Start:   rwgt.Time,
+			End:     rwgt.Time,
 		})
 	}
 }
@@ -122,7 +122,7 @@ func (s *setManagerImpl) GetEventFromSource(sourceNum int) {
 	ll.Infof("Front queue element: %v", s.events.Front().Get().String())
 }
 
-func (s setManagerImpl) GetRejectList() []ReqSE {
+func (s setManagerImpl) GetRejectList() []ReqWSE {
 	return s.rejectList
 }
 

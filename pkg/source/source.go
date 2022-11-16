@@ -4,18 +4,18 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/aaletov/go-smo/api"
 	"github.com/aaletov/go-smo/pkg/clock"
 	"github.com/aaletov/go-smo/pkg/events"
-	"github.com/aaletov/go-smo/pkg/request"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/exp/rand"
 	"gonum.org/v1/gonum/stat/distuv"
 )
 
 type Source interface {
-	Generate() *request.ReqWGT
+	Generate() *api.ReqWGT
 	GetNumber() int
-	GetGenerated() []request.ReqWGT
+	GetGenerated() []api.ReqWGT
 	GetNextEvent() *events.GenReqEvent
 }
 
@@ -41,7 +41,7 @@ func NewSource(logger *logrus.Logger, lambda time.Duration) Source {
 			Lambda: float64(lambda),
 			Src:    RandSource,
 		},
-		allGenerated: make([]request.ReqWGT, 0),
+		allGenerated: make([]api.ReqWGT, 0),
 	}
 }
 
@@ -52,29 +52,29 @@ type sourceImpl struct {
 	nextGenTime   time.Time
 	lambda        time.Duration
 	gen           distuv.Poisson
-	allGenerated  []request.ReqWGT
+	allGenerated  []api.ReqWGT
 }
 
-func (s *sourceImpl) Generate() *request.ReqWGT {
+func (s *sourceImpl) Generate() *api.ReqWGT {
 	ll := s.logger.WithField("method", "Generate")
 	s.lastReqNumber++
-	req := request.Request{
-		SourceNumber:  s.sourceNumber,
-		RequestNumber: s.lastReqNumber,
+	req := &api.Request{
+		SourceNumber:  &s.sourceNumber,
+		RequestNumber: &s.lastReqNumber,
 	}
-	s.allGenerated = append(s.allGenerated, request.ReqWGT{
-		Req:  &req,
-		Time: s.nextGenTime,
+	s.allGenerated = append(s.allGenerated, api.ReqWGT{
+		Request: req,
+		Time:    &s.nextGenTime,
 	})
 	ll.Info("Generated " + req.String())
-	return &request.ReqWGT{Req: &req, Time: s.nextGenTime}
+	return &api.ReqWGT{Request: req, Time: &s.nextGenTime}
 }
 
 func (s sourceImpl) GetNumber() int {
 	return s.sourceNumber
 }
 
-func (s sourceImpl) GetGenerated() []request.ReqWGT {
+func (s sourceImpl) GetGenerated() []api.ReqWGT {
 	return s.allGenerated
 }
 
