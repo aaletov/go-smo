@@ -1,5 +1,5 @@
 all:
-	go build -o ./build/a.exe .
+	go build -o ./build/a.out .
 
 clear:
 	rm -rf ./build/*

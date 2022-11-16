@@ -4,32 +4,46 @@ import (
 	"errors"
 
 	"github.com/aaletov/go-smo/pkg/buffer"
+	"github.com/aaletov/go-smo/pkg/events"
+	"github.com/aaletov/go-smo/pkg/queue"
 	"github.com/aaletov/go-smo/pkg/request"
 	"github.com/aaletov/go-smo/pkg/source"
+	"github.com/sirupsen/logrus"
 )
 
 type ReqWGT = request.ReqWGT
 type ReqSE = request.ReqSE
 
 type SetManager interface {
+	GetEventFromSource(sourceNum int)
 	GetRejectList() []ReqSE
 	ProcessSource(sourceNum int)
 }
 
-func NewSetManager(sources []source.Source, buffers []buffer.Buffer) SetManager {
+type Queue = queue.PriorityQueue[events.Event]
+
+func NewSetManager(logger *logrus.Logger, sources []source.Source, buffers []buffer.Buffer, events Queue) SetManager {
+	ll := logger.WithFields(logrus.Fields{
+		"component": "SetManager",
+	})
+
 	return &setManagerImpl{
+		logger:     ll,
 		sources:    sources,
 		buffers:    buffers,
 		bufPtr:     0,
 		rejectList: make([]ReqSE, 0),
+		events:     events,
 	}
 }
 
 type setManagerImpl struct {
+	logger     *logrus.Entry
 	sources    []source.Source
 	buffers    []buffer.Buffer
 	bufPtr     int
 	rejectList []ReqSE
+	events     Queue
 }
 
 func (s *setManagerImpl) movePtr() {
@@ -98,11 +112,22 @@ func (s *setManagerImpl) movePtrToFreeBuf() error {
 	return errors.New("No free buffers in system")
 }
 
+func (s *setManagerImpl) GetEventFromSource(sourceNum int) {
+	ll := s.logger.WithField("method", "GetEventFromSource")
+
+	event := s.sources[sourceNum-1].GetNextEvent()
+	s.events.Add(event)
+
+	ll.Infof("Got event: %v", event.String())
+	ll.Infof("Front queue element: %v", s.events.Front().Get().String())
+}
+
 func (s setManagerImpl) GetRejectList() []ReqSE {
 	return s.rejectList
 }
 
 func (s *setManagerImpl) ProcessSource(sourceNum int) {
+	s.GetEventFromSource(sourceNum)
 	rwgt := s.sources[sourceNum-1].Generate()
 	err := s.movePtrToFreeBuf()
 	if err != nil {
