@@ -47,7 +47,13 @@ func NewSystem(sourcesCount, buffersCount, devicesCount int, sourcesLambda, devA
 	for i := 0; i < buffersCount; i++ {
 		buffers[i] = buffer.NewBuffer(logger)
 	}
-	setManager := smgr.NewSetManager(sources, buffers)
+	events := queue.NewPriorityQueue[events.Event]()
+	setManager := smgr.NewSetManager(logger, sources, buffers, events)
+
+	for _, s := range sources {
+		setManager.GetEventFromSource(s.GetNumber())
+	}
+
 	devices := make([]device.Device, devicesCount)
 	for i := 0; i < devicesCount; i++ {
 		devices[i] = device.NewDevice(clock.SMOClock.Time, devA, devB)
@@ -65,7 +71,7 @@ func NewSystem(sourcesCount, buffersCount, devicesCount int, sourcesLambda, devA
 		buffers,
 		choiceManager,
 		devices,
-		queue.NewPriorityQueue[events.Event](),
+		events,
 	}
 }
 
@@ -74,11 +80,6 @@ func (s *System) GetEvents() {
 
 	sb := strings.Builder{}
 	sb.WriteString("Got events: [ ")
-	for _, source := range s.Sources {
-		event := source.GetNextEvent()
-		s.Events.Add(event)
-		sb.WriteString(event.String() + " ")
-	}
 	for _, d := range s.Devices {
 		event := d.GetNextEvent()
 		if event != nil {
