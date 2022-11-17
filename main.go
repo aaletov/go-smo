@@ -1,10 +1,14 @@
 package main
 
 import (
-	"time"
+	"fmt"
+	"log"
+	"net/http"
+	"os"
 
-	"github.com/aaletov/go-smo/pkg/clock"
-	"github.com/aaletov/go-smo/pkg/system"
+	"github.com/aaletov/go-smo/api"
+	"github.com/aaletov/go-smo/server"
+	"github.com/go-chi/chi/v5"
 )
 
 const (
@@ -15,14 +19,36 @@ const (
 )
 
 func main() {
-	clock.InitClock(time.Now())
-	sourcesLambda := time.Duration(1e9 * 11)
-	devA := time.Duration(1e11)
-	devB := time.Duration(1e12)
-	sys := system.NewSystem(3, 4, 3, sourcesLambda, devA, devB)
+	var port = 8080
 
-	for i := 0; i < 10; i++ {
-		sys.Iterate()
-		sys.PrintData()
+	swagger, err := api.GetSwagger()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error loading swagger spec\n: %s", err)
+		os.Exit(1)
 	}
+
+	// Clear out the servers array in the swagger spec, that skips validating
+	// that server names match. We don't know how this thing will be run.
+	swagger.Servers = nil
+
+	// Create an instance of our handler which satisfies the generated interface
+	smoServer := server.NewServer()
+
+	// This is how you set up a basic chi router
+	r := chi.NewRouter()
+
+	// Use our validation middleware to check all requests against the
+	// OpenAPI schema.
+	//r.Use(middleware.OapiRequestValidator(swagger))
+
+	// We now register our petStore above as the handler for the interface
+	api.HandlerFromMux(smoServer, r)
+
+	s := &http.Server{
+		Handler: r,
+		Addr:    fmt.Sprintf("0.0.0.0:%d", port),
+	}
+
+	// And we serve HTTP until the world ends.
+	log.Fatal(s.ListenAndServe())
 }

@@ -47,8 +47,8 @@ paths:
             application/json:
               schema:
                 type: array
-                items:
-                  type: integer
+                items: 
+                  $ref: '#/components/schemas/APISource'
   /buffer/getAll:
     get:
       summary: Get array of all buffer numbers
@@ -60,8 +60,8 @@ paths:
             application/json:
               schema:
                 type: array
-                items:
-                  type: integer
+                items: 
+                  $ref: '#/components/schemas/APIBuffer'
   /buffer/getAllProcessed:
     get:
       summary: Get all requests processed by buffer
@@ -93,8 +93,8 @@ paths:
             application/json:
               schema:
                 type: array
-                items:
-                  type: integer
+                items: 
+                  $ref: '#/components/schemas/APIDevice'
   /device/getDone:
     get:
       summary: Get all requests done by device
@@ -127,7 +127,7 @@ paths:
                 schema:
                   type: array
                   items: 
-                    $ref: '#/components/schemas/ReqWT'
+                    $ref: '#/components/schemas/ReqWSE'
   /request/getAllDone:
     get:
       summary: Get all done requests
@@ -176,6 +176,21 @@ components:
         end:
           type: string
           format: date-time
+    APISource:
+      type: object
+      properties:
+        sourceNum:
+          type: integer
+    APIBuffer:
+      type: object
+      properties:
+        bufNum:
+          type: integer
+    APIDevice:
+      type: object
+      properties:
+        devNum:
+          type: integer
         
 
         
