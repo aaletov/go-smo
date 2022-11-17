@@ -3,10 +3,10 @@ package cmgr
 import (
 	"sort"
 
+	"github.com/aaletov/go-smo/api"
 	"github.com/aaletov/go-smo/pkg/buffer"
 	"github.com/aaletov/go-smo/pkg/device"
 	"github.com/aaletov/go-smo/pkg/events"
-	"github.com/aaletov/go-smo/pkg/request"
 )
 
 type ChoiceManager interface {
@@ -29,7 +29,7 @@ type choiceManagerImpl struct {
 }
 
 func (c *choiceManagerImpl) toDevices() {
-	reqToBuf := make(map[*request.ReqWGT]int, 0)
+	reqToBuf := make(map[*api.ReqWGT]int, 0)
 	reqwgtSlice := make([]*buffer.ReqWGT, 0)
 	for i, b := range c.buffers {
 		if reqwgt := b.Get(); reqwgt != nil {
@@ -38,10 +38,10 @@ func (c *choiceManagerImpl) toDevices() {
 		}
 	}
 	sort.Slice(reqwgtSlice, func(i, j int) bool {
-		iSource := reqwgtSlice[i].Req.SourceNumber
-		jSource := reqwgtSlice[j].Req.SourceNumber
+		iSource := *reqwgtSlice[i].Request.SourceNumber
+		jSource := *reqwgtSlice[j].Request.SourceNumber
 		return (iSource < jSource) || ((iSource == jSource) &&
-			(reqwgtSlice[i].Req.RequestNumber < reqwgtSlice[j].Req.RequestNumber))
+			(*reqwgtSlice[i].Request.RequestNumber < *reqwgtSlice[j].Request.RequestNumber))
 	})
 
 	for _, device := range c.devices {

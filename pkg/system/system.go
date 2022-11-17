@@ -121,7 +121,7 @@ func (s System) printSourcesTable() {
 	for _, s := range s.Sources {
 		sourceRow := []any{fmt.Sprintf("Source #%v", s.GetNumber())}
 		for _, r := range s.GetGenerated() {
-			sourceRow = append(sourceRow, r.Req.String())
+			sourceRow = append(sourceRow, r.Request.String())
 		}
 		sourceTable.AppendRow(sourceRow)
 		sourceTable.AppendSeparator()
@@ -135,10 +135,10 @@ func (s System) printBuffersTable() {
 	for _, b := range s.Buffers {
 		bufRow := []any{fmt.Sprintf("Buffer #%v", b.GetNumber())}
 		for _, r := range b.GetAllProcessed() {
-			bufRow = append(bufRow, r.Req.String())
+			bufRow = append(bufRow, r.Request.String())
 		}
 		if b.Get() != nil {
-			bufRow = append(bufRow, "-> "+b.Get().Req.String())
+			bufRow = append(bufRow, "-> "+b.Get().Request.String())
 		}
 		bufferTable.AppendRow(bufRow)
 		bufferTable.AppendSeparator()
@@ -152,10 +152,10 @@ func (s System) printDevTable() {
 	for _, d := range s.Devices {
 		devRow := []any{fmt.Sprintf("Device #%v", d.GetNumber())}
 		for _, rwpt := range d.GetDone() {
-			devRow = append(devRow, rwpt.Req.String())
+			devRow = append(devRow, rwpt.Request.String())
 		}
 		if !d.IsFree() {
-			devRow = append(devRow, "-> "+d.Get().Req.String())
+			devRow = append(devRow, "-> "+d.Get().Request.String())
 		}
 		devTable.AppendRow(devRow)
 		devTable.AppendSeparator()
@@ -168,7 +168,7 @@ func (s System) printReject() {
 	rejTable.SetOutputMirror(os.Stdout)
 	rejRow := []any{"Reject"}
 	for _, rwse := range s.SetMgr.GetRejectList() {
-		rejRow = append(rejRow, rwse.Req.String())
+		rejRow = append(rejRow, rwse.Request.String())
 	}
 	rejTable.AppendRow(rejRow)
 	rejTable.Render()

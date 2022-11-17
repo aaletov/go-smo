@@ -5,20 +5,20 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/aaletov/go-smo/pkg/request"
+	"github.com/aaletov/go-smo/api"
 	"github.com/sirupsen/logrus"
 )
 
-type Request = request.Request
-type ReqWGT = request.ReqWGT
-type ReqSE = request.ReqSE
+type Request = api.Request
+type ReqWGT = api.ReqWGT
+type ReqWSE = api.ReqWSE
 
 type Buffer interface {
 	IsFree() bool
 	Get() *ReqWGT
 	Add(reqwgt *ReqWGT) error
 	Pop(popTime time.Time) error
-	GetAllProcessed() []ReqSE
+	GetAllProcessed() []ReqWSE
 	GetNumber() int
 }
 
@@ -35,7 +35,7 @@ func NewBuffer(logger *logrus.Logger) Buffer {
 	return &bufferImpl{
 		logger:       ll,
 		bufNumber:    bufCount,
-		allProcessed: make([]ReqSE, 0),
+		allProcessed: make([]ReqWSE, 0),
 	}
 }
 
@@ -43,7 +43,7 @@ type bufferImpl struct {
 	logger       *logrus.Entry
 	bufNumber    int
 	reqwgt       *ReqWGT
-	allProcessed []ReqSE
+	allProcessed []ReqWSE
 }
 
 func (b bufferImpl) IsFree() bool {
@@ -59,7 +59,7 @@ func (b *bufferImpl) Add(reqwgt *ReqWGT) error {
 		return errors.New("Buffer is busy")
 	}
 	b.reqwgt = reqwgt
-	b.logger.Infof("Added %v", reqwgt.Req.String())
+	b.logger.Infof("Added %v", reqwgt.Request.String())
 	return nil
 }
 
@@ -67,17 +67,17 @@ func (b *bufferImpl) Pop(popTime time.Time) error {
 	if b.reqwgt == nil {
 		return errors.New("Buffer is empty")
 	}
-	b.allProcessed = append(b.allProcessed, ReqSE{
-		Start: b.reqwgt.Time,
-		End:   popTime,
-		Req:   b.reqwgt.Req,
+	b.allProcessed = append(b.allProcessed, ReqWSE{
+		Start:   b.reqwgt.Time,
+		End:     &popTime,
+		Request: b.reqwgt.Request,
 	})
 	b.reqwgt = nil
-	b.logger.Infof("Popped %v", b.allProcessed[len(b.allProcessed)-1].Req.String())
+	b.logger.Infof("Popped %v", b.allProcessed[len(b.allProcessed)-1].Request.String())
 	return nil
 }
 
-func (b bufferImpl) GetAllProcessed() []ReqSE {
+func (b bufferImpl) GetAllProcessed() []ReqWSE {
 	return b.allProcessed
 }
 
