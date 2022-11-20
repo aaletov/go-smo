@@ -19,7 +19,7 @@ const (
 )
 
 func main() {
-	var port = 8080
+	var port = 8081
 
 	swagger, err := api.GetSwagger()
 	if err != nil {

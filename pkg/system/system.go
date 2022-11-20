@@ -2,7 +2,6 @@ package system
 
 import (
 	"fmt"
-	"os"
 	"strings"
 	"time"
 
@@ -16,8 +15,6 @@ import (
 	"github.com/aaletov/go-smo/pkg/source"
 	nested "github.com/antonfisher/nested-logrus-formatter"
 	"github.com/sirupsen/logrus"
-
-	"github.com/jedib0t/go-pretty/v6/table"
 )
 
 type Queue = queue.PriorityQueue[events.Event]
@@ -56,7 +53,7 @@ func NewSystem(sourcesCount, buffersCount, devicesCount int, sourcesLambda, devA
 
 	devices := make([]device.Device, devicesCount)
 	for i := 0; i < devicesCount; i++ {
-		devices[i] = device.NewDevice(clock.SMOClock.Time, devA, devB)
+		devices[i] = device.NewDevice(clock.SMOClock.StartTime, devA, devB)
 	}
 	choiceManager := cmgr.NewChoiceManager(buffers, devices)
 
@@ -104,79 +101,18 @@ func (s *System) Iterate() {
 		s.HandleDevFreeEvent(e)
 	}
 	ll.Infof("Processed event %v\n", nextEvent.String())
+	fmt.Println(clock.SMOClock.Time.String())
 }
 
 func (s *System) HandleGenReqEvent(event *events.GenReqEvent) {
+	clock.SMOClock.Time = event.Time
+	fmt.Println("Time " + clock.SMOClock.Time.String())
 	s.SetMgr.ProcessSource(event.SourceNum)
 	s.ChoiceMgr.HandleGenReqEvent(event)
 }
 
 func (s *System) HandleDevFreeEvent(event *events.DevFreeEvent) {
+	clock.SMOClock.Time = event.Time
+	fmt.Println("Time " + clock.SMOClock.Time.String())
 	s.ChoiceMgr.HandleDevFreeEvent(event)
-}
-
-func (s System) printSourcesTable() {
-	sourceTable := table.NewWriter()
-	sourceTable.SetOutputMirror(os.Stdout)
-	for _, s := range s.Sources {
-		sourceRow := []any{fmt.Sprintf("Source #%v", s.GetNumber())}
-		for _, r := range s.GetGenerated() {
-			sourceRow = append(sourceRow, r.Request.String())
-		}
-		sourceTable.AppendRow(sourceRow)
-		sourceTable.AppendSeparator()
-	}
-	sourceTable.Render()
-}
-
-func (s System) printBuffersTable() {
-	bufferTable := table.NewWriter()
-	bufferTable.SetOutputMirror(os.Stdout)
-	for _, b := range s.Buffers {
-		bufRow := []any{fmt.Sprintf("Buffer #%v", b.GetNumber())}
-		for _, r := range b.GetAllProcessed() {
-			bufRow = append(bufRow, r.Request.String())
-		}
-		if b.Get() != nil {
-			bufRow = append(bufRow, "-> "+b.Get().Request.String())
-		}
-		bufferTable.AppendRow(bufRow)
-		bufferTable.AppendSeparator()
-	}
-	bufferTable.Render()
-}
-
-func (s System) printDevTable() {
-	devTable := table.NewWriter()
-	devTable.SetOutputMirror(os.Stdout)
-	for _, d := range s.Devices {
-		devRow := []any{fmt.Sprintf("Device #%v", d.GetNumber())}
-		for _, rwpt := range d.GetDone() {
-			devRow = append(devRow, rwpt.Request.String())
-		}
-		if !d.IsFree() {
-			devRow = append(devRow, "-> "+d.Get().Request.String())
-		}
-		devTable.AppendRow(devRow)
-		devTable.AppendSeparator()
-	}
-	devTable.Render()
-}
-
-func (s System) printReject() {
-	rejTable := table.NewWriter()
-	rejTable.SetOutputMirror(os.Stdout)
-	rejRow := []any{"Reject"}
-	for _, rwse := range s.SetMgr.GetRejectList() {
-		rejRow = append(rejRow, rwse.Request.String())
-	}
-	rejTable.AppendRow(rejRow)
-	rejTable.Render()
-}
-
-func (s System) PrintData() {
-	s.printSourcesTable()
-	s.printBuffersTable()
-	s.printDevTable()
-	s.printReject()
 }

@@ -58,7 +58,7 @@ type deviceImpl struct {
 }
 
 func (d deviceImpl) genDuration() time.Duration {
-	return time.Duration(d.a + (d.b-d.a)*rand.Int63())
+	return time.Duration(float64(d.a) + float64(d.b-d.a)*(rand.Float64()))
 }
 
 func (d deviceImpl) IsFree() bool {
@@ -79,12 +79,12 @@ func (d *deviceImpl) Add(req *ReqWGT) error {
 	}
 
 	if d.idle {
-		d.lastStart = *req.Time
+		d.lastStart = req.Time
 	} else {
 		d.lastStart = d.lastStart.Add(d.lastDuration)
 	}
 	d.lastDuration = d.genDuration()
-	d.req = req.Request
+	d.req = &req.Request
 	d.idle = false
 
 	d.nextEvent = &events.DevFreeEvent{
@@ -96,7 +96,7 @@ func (d *deviceImpl) Add(req *ReqWGT) error {
 }
 
 func (d deviceImpl) Get() *ReqWST {
-	return &ReqWST{Request: d.req, Time: &d.lastStart}
+	return &ReqWST{Request: *d.req, Time: d.lastStart}
 }
 
 func (d deviceImpl) GetDone() []ReqWPT {
@@ -110,9 +110,9 @@ func (d *deviceImpl) Pop() error {
 	}
 	endTime := d.lastStart.Add(d.lastDuration)
 	reqwpt := ReqWPT{
-		Request: d.req,
-		Start:   &d.lastStart,
-		End:     &endTime,
+		Request: *d.req,
+		Start:   d.lastStart,
+		End:     endTime,
 	}
 	d.doneReqs = append(d.doneReqs, reqwpt)
 	d.req = nil
@@ -125,9 +125,11 @@ func (d deviceImpl) GetNumber() int {
 }
 
 func (d *deviceImpl) GetNextEvent() *events.DevFreeEvent {
-	event := d.nextEvent
-	if event != nil {
+	if d.nextEvent != nil {
+		event := *d.nextEvent
 		d.nextEvent = nil
+		return &event
+	} else {
+		return nil
 	}
-	return event
 }

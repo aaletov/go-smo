@@ -69,7 +69,7 @@ func (b *bufferImpl) Pop(popTime time.Time) error {
 	}
 	b.allProcessed = append(b.allProcessed, ReqWSE{
 		Start:   b.reqwgt.Time,
-		End:     &popTime,
+		End:     popTime,
 		Request: b.reqwgt.Request,
 	})
 	b.reqwgt = nil

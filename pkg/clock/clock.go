@@ -6,7 +6,8 @@ import (
 
 // No thread safety (at all)
 type Clock struct {
-	Time time.Time
+	Time      time.Time
+	StartTime time.Time
 }
 
 var (
@@ -14,5 +15,8 @@ var (
 )
 
 func InitClock(time time.Time) {
-	SMOClock = &Clock{time}
+	SMOClock = &Clock{
+		Time:      time,
+		StartTime: time,
+	}
 }

@@ -38,10 +38,10 @@ func (c *choiceManagerImpl) toDevices() {
 		}
 	}
 	sort.Slice(reqwgtSlice, func(i, j int) bool {
-		iSource := *reqwgtSlice[i].Request.SourceNumber
-		jSource := *reqwgtSlice[j].Request.SourceNumber
+		iSource := reqwgtSlice[i].Request.SourceNumber
+		jSource := reqwgtSlice[j].Request.SourceNumber
 		return (iSource < jSource) || ((iSource == jSource) &&
-			(*reqwgtSlice[i].Request.RequestNumber < *reqwgtSlice[j].Request.RequestNumber))
+			(reqwgtSlice[i].Request.RequestNumber < reqwgtSlice[j].Request.RequestNumber))
 	})
 
 	for _, device := range c.devices {

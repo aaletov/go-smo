@@ -35,7 +35,7 @@ func NewSource(logger *logrus.Logger, lambda time.Duration) Source {
 		logger:        ll,
 		sourceNumber:  sourcesCount,
 		lastReqNumber: 0,
-		nextGenTime:   clock.SMOClock.Time,
+		nextGenTime:   clock.SMOClock.StartTime,
 		lambda:        lambda,
 		gen: distuv.Poisson{
 			Lambda: float64(lambda),
@@ -59,15 +59,16 @@ func (s *sourceImpl) Generate() *api.ReqWGT {
 	ll := s.logger.WithField("method", "Generate")
 	s.lastReqNumber++
 	req := &api.Request{
-		SourceNumber:  &s.sourceNumber,
-		RequestNumber: &s.lastReqNumber,
+		SourceNumber:  s.sourceNumber,
+		RequestNumber: s.lastReqNumber,
 	}
+	genTime := s.nextGenTime
 	s.allGenerated = append(s.allGenerated, api.ReqWGT{
-		Request: req,
-		Time:    &s.nextGenTime,
+		Request: *req,
+		Time:    genTime,
 	})
 	ll.Info("Generated " + req.String())
-	return &api.ReqWGT{Request: req, Time: &s.nextGenTime}
+	return &api.ReqWGT{Request: *req, Time: s.nextGenTime}
 }
 
 func (s sourceImpl) GetNumber() int {
