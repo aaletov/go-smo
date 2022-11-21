@@ -25,6 +25,17 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/WaveInfo'
+  /getPivotInfo:
+    get:
+      summary: Get info for pivot table
+      operationId: getPivotInfo
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PivotInfo'
 components:
   schemas:
     ReqWT:
@@ -140,6 +151,67 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/ReqWSE'
+    PivotInfo:
+      type: object
+      required:
+        - sourcesPivotInfo
+        - devicesPivotInfo
+      properties:
+        sourcesPivotInfo:
+          type: array
+          items:
+            $ref: '#/components/schemas/SourcePivotInfo'
+        devicesPivotInfo:
+          type: array
+          items:
+            $ref: '#/components/schemas/DevicePivotInfo'
+    SourcePivotInfo:
+      type: object
+      required:
+        - name
+        - reqCount
+        - rejChance
+        - sysTime
+        - waitTime
+        - procTime
+        - waitTimeDispertion
+        - procTimeDispertion
+      properties:
+        name:
+          type: string
+        reqCount:
+          type: integer
+        rejChance:
+          type: number
+          format: double
+        sysTime:
+          type: string
+          format: duration
+        waitTime:
+          type: string
+          format: duration
+        procTime:
+          type: string
+          format: duration
+        waitTimeDispertion:
+          type: string
+          format: duration
+        procTimeDispertion:
+          type: string
+          format: duration
+    DevicePivotInfo:
+      type: object
+      required:
+        - name
+        - usageCoef
+      properties:
+        name:
+          type: string
+        usageCoef:
+          type: number
+          format: double
+
+          
 
         
 

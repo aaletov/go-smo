@@ -27,15 +27,23 @@ type ReqWPT = ReqWSE
 // Request with reject time
 type ReqWRT = ReqWT
 
-func (r *ReqWT) String() string {
+func (r ReqWT) String() string {
 	return r.Request.String() + "WithTime[" + r.Time.String() + "]"
 }
 
-func (r *ReqWSE) String() string {
+func (r ReqWSE) String() string {
 	return r.Request.String() + "Start[" + r.Start.String() + "]" +
 		"End[" + r.End.String() + "]"
 }
 
-func (r *Request) String() string {
+func (r Request) String() string {
 	return "Req[" + strconv.Itoa(r.SourceNumber) + "." + strconv.Itoa(r.RequestNumber) + "]"
+}
+
+func (r Request) Equals(other Request) bool {
+	return (r.SourceNumber == other.SourceNumber) && (r.RequestNumber == other.RequestNumber)
+}
+
+func (r ReqWSE) Equals(other ReqWSE) bool {
+	return r.Request.Equals(other.Request)
 }

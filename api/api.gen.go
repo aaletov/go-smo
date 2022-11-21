@@ -38,6 +38,18 @@ type APISource struct {
 	SourceNum int     `json:"sourceNum"`
 }
 
+// DevicePivotInfo defines model for DevicePivotInfo.
+type DevicePivotInfo struct {
+	Name      string  `json:"name"`
+	UsageCoef float64 `json:"usageCoef"`
+}
+
+// PivotInfo defines model for PivotInfo.
+type PivotInfo struct {
+	DevicesPivotInfo []DevicePivotInfo `json:"devicesPivotInfo"`
+	SourcesPivotInfo []SourcePivotInfo `json:"sourcesPivotInfo"`
+}
+
 // ReqWSE defines model for ReqWSE.
 type ReqWSE struct {
 	End     time.Time `json:"end"`
@@ -57,6 +69,18 @@ type Request struct {
 	SourceNumber  int `json:"sourceNumber"`
 }
 
+// SourcePivotInfo defines model for SourcePivotInfo.
+type SourcePivotInfo struct {
+	Name               string  `json:"name"`
+	ProcTime           string  `json:"procTime"`
+	ProcTimeDispertion string  `json:"procTimeDispertion"`
+	RejChance          float64 `json:"rejChance"`
+	ReqCount           int     `json:"reqCount"`
+	SysTime            string  `json:"sysTime"`
+	WaitTime           string  `json:"waitTime"`
+	WaitTimeDispertion string  `json:"waitTimeDispertion"`
+}
+
 // WaveInfo defines model for WaveInfo.
 type WaveInfo struct {
 	Buffers   []APIBuffer `json:"buffers"`
@@ -70,6 +94,9 @@ type WaveInfo struct {
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Get info for pivot table
+	// (GET /getPivotInfo)
+	GetPivotInfo(w http.ResponseWriter, r *http.Request)
 	// Get all info for waveform
 	// (GET /getWaveInfo)
 	GetWaveNumber(w http.ResponseWriter, r *http.Request)
@@ -83,6 +110,21 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// GetPivotInfo operation middleware
+func (siw *ServerInterfaceWrapper) GetPivotInfo(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetPivotInfo(w, r)
+	})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
 
 // GetWaveNumber operation middleware
 func (siw *ServerInterfaceWrapper) GetWaveNumber(w http.ResponseWriter, r *http.Request) {
@@ -213,6 +255,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/getPivotInfo", wrapper.GetPivotInfo)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/getWaveInfo", wrapper.GetWaveNumber)
 	})
 
@@ -222,18 +267,21 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

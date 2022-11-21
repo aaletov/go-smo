@@ -1,7 +1,6 @@
 package system
 
 import (
-	"fmt"
 	"strings"
 	"time"
 
@@ -101,18 +100,15 @@ func (s *System) Iterate() {
 		s.HandleDevFreeEvent(e)
 	}
 	ll.Infof("Processed event %v\n", nextEvent.String())
-	fmt.Println(clock.SMOClock.Time.String())
 }
 
 func (s *System) HandleGenReqEvent(event *events.GenReqEvent) {
 	clock.SMOClock.Time = event.Time
-	fmt.Println("Time " + clock.SMOClock.Time.String())
 	s.SetMgr.ProcessSource(event.SourceNum)
 	s.ChoiceMgr.HandleGenReqEvent(event)
 }
 
 func (s *System) HandleDevFreeEvent(event *events.DevFreeEvent) {
 	clock.SMOClock.Time = event.Time
-	fmt.Println("Time " + clock.SMOClock.Time.String())
 	s.ChoiceMgr.HandleDevFreeEvent(event)
 }
