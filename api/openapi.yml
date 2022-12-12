@@ -36,6 +36,28 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/PivotInfo'
+  /initSystem:
+    post:
+      summary: Create new system
+      operationId: initSystem
+      requestBody:
+        description: System parameters
+        required: true
+        content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/SystemParameters'
+      responses:
+        '200':
+          description: Success
+  /doStep:
+    post:
+      summary: Do step
+      operationId: doStep
+      responses:
+        '200':
+          description: Success
+
 components:
   schemas:
     ReqWT:
@@ -210,6 +232,37 @@ components:
         usageCoef:
           type: number
           format: double
+    SystemParameters:
+      type: object
+      required:
+        - sourcesCount
+        - buffersCount
+        - devicesCount
+        - sourcesLambda
+        - devA
+        - devB
+        - stepMode
+      properties:
+        sourcesCount:
+          type: integer
+        buffersCount:
+          type: integer
+        devicesCount:
+          type: integer
+        sourcesLambda:
+          type: string
+          format: duration
+        devA:
+          type: string
+          format: duration
+        devB:
+          type: string
+          format: duration
+        stepMode:
+          type: boolean
+        iterationsCount:
+          type: integer
+
 
           
 

@@ -26,16 +26,18 @@ type Device interface {
 	Pop() error
 	GetNumber() int
 	GetNextEvent() *events.DevFreeEvent
+	GetDevA() time.Duration
+	GetDevB() time.Duration
 }
 
 var (
-	deviceCount = 0
+	DeviceCount = 0
 )
 
 func NewDevice(startTime time.Time, a, b time.Duration) Device {
-	deviceCount++
+	DeviceCount++
 	return &deviceImpl{
-		deviceNumber: deviceCount,
+		deviceNumber: DeviceCount,
 		a:            int64(a),
 		b:            int64(b),
 		rand:         rand.New(source.RandSource),
@@ -132,4 +134,12 @@ func (d *deviceImpl) GetNextEvent() *events.DevFreeEvent {
 	} else {
 		return nil
 	}
+}
+
+func (d deviceImpl) GetDevA() time.Duration {
+	return time.Duration(d.a)
+}
+
+func (d deviceImpl) GetDevB() time.Duration {
+	return time.Duration(d.b)
 }

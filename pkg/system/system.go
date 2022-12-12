@@ -2,6 +2,7 @@ package system
 
 import (
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/aaletov/go-smo/pkg/buffer"
@@ -29,7 +30,16 @@ type System struct {
 	Events    Queue
 }
 
-func NewSystem(sourcesCount, buffersCount, devicesCount int, sourcesLambda, devA, devB time.Duration) *System {
+var (
+	GlobalSystem *System
+	SysLock      *sync.Mutex
+)
+
+func InitSystem(sourcesCount, buffersCount, devicesCount int, sourcesLambda, devA, devB time.Duration) {
+	source.SourcesCount = 0
+	buffer.BufCount = 0
+	device.DeviceCount = 0
+
 	logger := logrus.New()
 	logger.SetFormatter(&nested.Formatter{
 		HideKeys:    true,
@@ -59,7 +69,8 @@ func NewSystem(sourcesCount, buffersCount, devicesCount int, sourcesLambda, devA
 	ll := logger.WithFields(logrus.Fields{
 		"component": "System",
 	})
-	return &System{
+
+	GlobalSystem = &System{
 		ll,
 		0,
 		sources,
@@ -69,6 +80,9 @@ func NewSystem(sourcesCount, buffersCount, devicesCount int, sourcesLambda, devA
 		devices,
 		events,
 	}
+	SysLock = &sync.Mutex{}
+
+	return
 }
 
 func (s *System) GetEvents() {

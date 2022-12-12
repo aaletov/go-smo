@@ -81,6 +81,18 @@ type SourcePivotInfo struct {
 	WaitTimeDispertion string  `json:"waitTimeDispertion"`
 }
 
+// SystemParameters defines model for SystemParameters.
+type SystemParameters struct {
+	BuffersCount    int    `json:"buffersCount"`
+	DevA            string `json:"devA"`
+	DevB            string `json:"devB"`
+	DevicesCount    int    `json:"devicesCount"`
+	IterationsCount *int   `json:"iterationsCount,omitempty"`
+	SourcesCount    int    `json:"sourcesCount"`
+	SourcesLambda   string `json:"sourcesLambda"`
+	StepMode        bool   `json:"stepMode"`
+}
+
 // WaveInfo defines model for WaveInfo.
 type WaveInfo struct {
 	Buffers   []APIBuffer `json:"buffers"`
@@ -92,14 +104,23 @@ type WaveInfo struct {
 	StartTime time.Time   `json:"startTime"`
 }
 
+// InitSystemJSONRequestBody defines body for InitSystem for application/json ContentType.
+type InitSystemJSONRequestBody = SystemParameters
+
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
+	// Do step
+	// (POST /doStep)
+	DoStep(w http.ResponseWriter, r *http.Request)
 	// Get info for pivot table
 	// (GET /getPivotInfo)
 	GetPivotInfo(w http.ResponseWriter, r *http.Request)
 	// Get all info for waveform
 	// (GET /getWaveInfo)
 	GetWaveNumber(w http.ResponseWriter, r *http.Request)
+	// Create new system
+	// (POST /initSystem)
+	InitSystem(w http.ResponseWriter, r *http.Request)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -110,6 +131,21 @@ type ServerInterfaceWrapper struct {
 }
 
 type MiddlewareFunc func(http.Handler) http.Handler
+
+// DoStep operation middleware
+func (siw *ServerInterfaceWrapper) DoStep(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DoStep(w, r)
+	})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
 
 // GetPivotInfo operation middleware
 func (siw *ServerInterfaceWrapper) GetPivotInfo(w http.ResponseWriter, r *http.Request) {
@@ -132,6 +168,21 @@ func (siw *ServerInterfaceWrapper) GetWaveNumber(w http.ResponseWriter, r *http.
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetWaveNumber(w, r)
+	})
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r.WithContext(ctx))
+}
+
+// InitSystem operation middleware
+func (siw *ServerInterfaceWrapper) InitSystem(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.InitSystem(w, r)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -255,10 +306,16 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/doStep", wrapper.DoStep)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/getPivotInfo", wrapper.GetPivotInfo)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/getWaveInfo", wrapper.GetWaveNumber)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/initSystem", wrapper.InitSystem)
 	})
 
 	return r
@@ -267,21 +324,24 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
+	"prQEFE0sdWKa8/jj+E8AAAD//2UMVj6jEQAA",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

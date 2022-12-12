@@ -10,34 +10,107 @@ import (
 	"github.com/aaletov/go-smo/api"
 	"github.com/aaletov/go-smo/pkg/clock"
 	"github.com/aaletov/go-smo/pkg/system"
+	"github.com/labstack/gommon/log"
 )
 
 type goSmoServer struct {
-	system *system.System
 }
 
-var (
-	sourcesLambda = time.Duration(1e8 * 7)
-	devA          = time.Duration(1e9)
-	devB          = time.Duration(1.4 * 1e9)
-)
+// var (
+// 	sourcesLambda = time.Duration(1e8 * 7)
+// 	devA          = time.Duration(1e9)
+// 	devB          = time.Duration(1.4 * 1e9)
+// )
 
 func NewServer() api.ServerInterface {
-	clock.InitClock(time.Unix(0, 0))
+	return goSmoServer{}
+}
 
-	sys := system.NewSystem(3, 4, 3, sourcesLambda, devA, devB)
+func (g goSmoServer) DoStep(w http.ResponseWriter, r *http.Request) {
+	system.SysLock.Lock()
+	defer system.SysLock.Unlock()
 
-	for i := 0; i < 20; i++ {
-		sys.Iterate()
-		sys.PrintData()
+	system.GlobalSystem.Iterate()
+	system.GlobalSystem.PrintData()
+
+	return
+}
+
+func (g goSmoServer) InitSystem(w http.ResponseWriter, r *http.Request) {
+	//(sourcesCount, buffersCount, devicesCount int,
+	//	sourcesLambda, devA, devB time.Duration, stepMode bool) {
+	var (
+		err           error
+		resp          api.SystemParameters
+		sourcesLambda time.Duration
+		devA          time.Duration
+		devB          time.Duration
+	)
+
+	if err = json.NewDecoder(r.Body).Decode(&resp); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Errorf("unable to decode: %v", err)
+		return
 	}
 
-	return goSmoServer{sys}
+	if sourcesLambda, err = time.ParseDuration(resp.SourcesLambda); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Errorf("unable to parse sourcesLambda: %v", err)
+		return
+	}
+
+	if devA, err = time.ParseDuration(resp.DevA); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Errorf("unable to parse devA: %v", err)
+		return
+	}
+
+	if devB, err = time.ParseDuration(resp.DevB); err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		log.Errorf("unable to parse devB: %v", err)
+		return
+	}
+
+	system.InitSystem(
+		resp.SourcesCount,
+		resp.BuffersCount,
+		resp.DevicesCount,
+		sourcesLambda,
+		devA,
+		devB,
+	)
+
+	if resp.StepMode {
+		return
+	}
+
+	if resp.IterationsCount == nil {
+		w.Write([]byte("Iterations count not provided for automatic mode"))
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	for i := 0; i < *resp.IterationsCount; i++ {
+		func() {
+			system.SysLock.Lock()
+			defer system.SysLock.Unlock()
+
+			system.GlobalSystem.Iterate()
+			system.GlobalSystem.PrintData()
+		}()
+	}
+
+	return
 }
 
 func (g goSmoServer) GetWaveNumber(w http.ResponseWriter, r *http.Request) {
+	if system.GlobalSystem == nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
 	apiSources := make([]api.APISource, 0)
-	for _, s := range g.system.Sources {
+	for _, s := range system.GlobalSystem.Sources {
 		generated := s.GetGenerated()
 
 		num := s.GetNumber()
@@ -48,7 +121,7 @@ func (g goSmoServer) GetWaveNumber(w http.ResponseWriter, r *http.Request) {
 	}
 
 	apiBuffers := make([]api.APIBuffer, 0)
-	for _, b := range g.system.Buffers {
+	for _, b := range system.GlobalSystem.Buffers {
 		processed := b.GetAllProcessed()
 
 		apiBuffers = append(apiBuffers, api.APIBuffer{
@@ -60,7 +133,7 @@ func (g goSmoServer) GetWaveNumber(w http.ResponseWriter, r *http.Request) {
 
 	allDone := make([]api.ReqWPT, 0)
 	apiDevices := make([]api.APIDevice, 0)
-	for _, d := range g.system.Devices {
+	for _, d := range system.GlobalSystem.Devices {
 		done := d.GetDone()
 		allDone = append(allDone, done...)
 
@@ -71,7 +144,7 @@ func (g goSmoServer) GetWaveNumber(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
-	allRejected := g.system.SetMgr.GetRejectList()
+	allRejected := system.GlobalSystem.SetMgr.GetRejectList()
 
 	rv := api.WaveInfo{
 		Sources:   apiSources,
@@ -89,7 +162,12 @@ func (g goSmoServer) GetWaveNumber(w http.ResponseWriter, r *http.Request) {
 }
 
 func (g goSmoServer) GetPivotInfo(w http.ResponseWriter, r *http.Request) {
-	devices := g.system.Devices
+	if system.GlobalSystem == nil {
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+
+	devices := system.GlobalSystem.Devices
 	devicesPivotInfo := make([]api.DevicePivotInfo, len(devices))
 
 	start := clock.SMOClock.StartTime
@@ -101,8 +179,11 @@ func (g goSmoServer) GetPivotInfo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	sources := g.system.Sources
+	sources := system.GlobalSystem.Sources
 	sourcesPivotInfo := make([]api.SourcePivotInfo, len(sources))
+
+	devA := system.GlobalSystem.Devices[0].GetDevA()
+	devB := system.GlobalSystem.Devices[0].GetDevB()
 
 	for i, source := range sources {
 		sourcesPivotInfo[i] = api.SourcePivotInfo{
@@ -112,7 +193,7 @@ func (g goSmoServer) GetPivotInfo(w http.ResponseWriter, r *http.Request) {
 			ProcTime:           g.getAvgProcTime(source.GetNumber()).String(),
 			WaitTime:           g.getAvgWaitTime(source.GetNumber()).String(),
 			SysTime:            g.getAvgSysTime(source.GetNumber()).String(),
-			WaitTimeDispertion: g.getWaitTimeDispertion(sourcesLambda, source.GetNumber()).String(),
+			WaitTimeDispertion: g.getWaitTimeDispertion(source.GetLambda(), source.GetNumber()).String(),
 			ProcTimeDispertion: g.getProcTimeDispertion(devA, devB, source.GetNumber()).String(),
 		}
 	}
@@ -129,7 +210,7 @@ func (g goSmoServer) GetPivotInfo(w http.ResponseWriter, r *http.Request) {
 
 func (g goSmoServer) getRejChance(sourceNum int) float64 {
 	doneCount := len(getAllBySource(g.getAllDone(), sourceNum))
-	rejCount := len(getAllBySource(g.system.SetMgr.GetRejectList(), sourceNum))
+	rejCount := len(getAllBySource(system.GlobalSystem.SetMgr.GetRejectList(), sourceNum))
 
 	return float64(rejCount) / float64(rejCount+doneCount)
 }
@@ -211,7 +292,7 @@ func getAllBySource(rwseArr []api.ReqWSE, sourceNum int) []api.ReqWSE {
 
 func (g goSmoServer) getAllProcessed() []api.ReqWSE {
 	rwseArr := make([]api.ReqWSE, 0)
-	buffers := g.system.Buffers
+	buffers := system.GlobalSystem.Buffers
 	for _, b := range buffers {
 		rwseArr = append(rwseArr, b.GetAllProcessed()...)
 	}
@@ -221,7 +302,7 @@ func (g goSmoServer) getAllProcessed() []api.ReqWSE {
 
 func (g goSmoServer) getAllDone() []api.ReqWSE {
 	rwseArr := make([]api.ReqWSE, 0)
-	devices := g.system.Devices
+	devices := system.GlobalSystem.Devices
 	for _, d := range devices {
 		rwseArr = append(rwseArr, d.GetDone()...)
 	}
@@ -230,7 +311,7 @@ func (g goSmoServer) getAllDone() []api.ReqWSE {
 }
 
 func (g goSmoServer) getUsageCoef(devNum int, start, end time.Time) float64 {
-	rwseArr := g.system.Devices[devNum-1].GetDone()
+	rwseArr := system.GlobalSystem.Devices[devNum-1].GetDone()
 	var sumDuration time.Duration
 	for _, rwse := range rwseArr {
 		sumDuration += rwse.End.Sub(rwse.Start)
