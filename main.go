@@ -5,10 +5,13 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/aaletov/go-smo/api"
+	"github.com/aaletov/go-smo/pkg/clock"
 	"github.com/aaletov/go-smo/server"
 	"github.com/go-chi/chi/v5"
+	"github.com/rs/cors"
 )
 
 const (
@@ -19,7 +22,8 @@ const (
 )
 
 func main() {
-	var port = 8080
+	var port = 8081
+	clock.InitClock(time.Unix(0, 0))
 
 	swagger, err := api.GetSwagger()
 	if err != nil {
@@ -36,6 +40,7 @@ func main() {
 
 	// This is how you set up a basic chi router
 	r := chi.NewRouter()
+	r.Use(cors.Default().Handler)
 
 	// Use our validation middleware to check all requests against the
 	// OpenAPI schema.

@@ -73,15 +73,15 @@ func (s *setManagerImpl) handleReject(rwgt *ReqWGT) {
 	}
 	minPriorRwgt := rwgtSlice[0]
 	for _, currRwgt := range rwgtSlice {
-		if *currRwgt.Request.SourceNumber > *minPriorRwgt.Request.SourceNumber {
+		if currRwgt.Request.SourceNumber > minPriorRwgt.Request.SourceNumber {
 			minPriorRwgt = currRwgt
 		}
 	}
-	if *minPriorRwgt.Request.SourceNumber > *rwgt.Request.SourceNumber {
+	if minPriorRwgt.Request.SourceNumber > rwgt.Request.SourceNumber {
 		// reject minPrior
 		bufPtr := rwgtToBufPtr[minPriorRwgt]
 		bufRwgt := s.buffers[bufPtr].Get()
-		s.buffers[bufPtr].Pop(*rwgt.Time)
+		s.buffers[bufPtr].Pop(rwgt.Time)
 		s.rejectList = append(s.rejectList, ReqWSE{
 			Request: bufRwgt.Request,
 			Start:   bufRwgt.Time,
@@ -127,8 +127,8 @@ func (s setManagerImpl) GetRejectList() []ReqWSE {
 }
 
 func (s *setManagerImpl) ProcessSource(sourceNum int) {
-	s.GetEventFromSource(sourceNum)
 	rwgt := s.sources[sourceNum-1].Generate()
+	s.GetEventFromSource(sourceNum)
 	err := s.movePtrToFreeBuf()
 	if err != nil {
 		s.handleReject(rwgt)

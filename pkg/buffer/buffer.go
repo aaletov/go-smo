@@ -23,18 +23,18 @@ type Buffer interface {
 }
 
 var (
-	bufCount int = 0
+	BufCount int = 0
 )
 
 func NewBuffer(logger *logrus.Logger) Buffer {
-	bufCount++
+	BufCount++
 	ll := logger.WithFields(logrus.Fields{
-		"component": fmt.Sprintf("Buffer #%v", bufCount),
+		"component": fmt.Sprintf("Buffer #%v", BufCount),
 	})
 
 	return &bufferImpl{
 		logger:       ll,
-		bufNumber:    bufCount,
+		bufNumber:    BufCount,
 		allProcessed: make([]ReqWSE, 0),
 	}
 }
@@ -69,7 +69,7 @@ func (b *bufferImpl) Pop(popTime time.Time) error {
 	}
 	b.allProcessed = append(b.allProcessed, ReqWSE{
 		Start:   b.reqwgt.Time,
-		End:     &popTime,
+		End:     popTime,
 		Request: b.reqwgt.Request,
 	})
 	b.reqwgt = nil

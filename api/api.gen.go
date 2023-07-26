@@ -14,86 +14,113 @@ import (
 	"strings"
 	"time"
 
-	"github.com/deepmap/oapi-codegen/pkg/runtime"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/go-chi/chi/v5"
 )
 
 // APIBuffer defines model for APIBuffer.
 type APIBuffer struct {
-	BufNum *int `json:"bufNum,omitempty"`
+	BufNum    int      `json:"bufNum"`
+	Current   *ReqWT   `json:"current,omitempty"`
+	Processed []ReqWSE `json:"processed"`
 }
 
 // APIDevice defines model for APIDevice.
 type APIDevice struct {
-	DevNum *int `json:"devNum,omitempty"`
+	Current *ReqWT   `json:"current,omitempty"`
+	DevNum  int      `json:"devNum"`
+	Done    []ReqWSE `json:"done"`
 }
 
 // APISource defines model for APISource.
 type APISource struct {
-	SourceNum *int `json:"sourceNum,omitempty"`
+	Generated []ReqWT `json:"generated"`
+	SourceNum int     `json:"sourceNum"`
+}
+
+// DevicePivotInfo defines model for DevicePivotInfo.
+type DevicePivotInfo struct {
+	Name      string  `json:"name"`
+	UsageCoef float64 `json:"usageCoef"`
+}
+
+// PivotInfo defines model for PivotInfo.
+type PivotInfo struct {
+	DevicesPivotInfo []DevicePivotInfo `json:"devicesPivotInfo"`
+	SourcesPivotInfo []SourcePivotInfo `json:"sourcesPivotInfo"`
 }
 
 // ReqWSE defines model for ReqWSE.
 type ReqWSE struct {
-	End     *time.Time `json:"end,omitempty"`
-	Request *Request   `json:"request,omitempty"`
-	Start   *time.Time `json:"start,omitempty"`
+	End     time.Time `json:"end"`
+	Request Request   `json:"request"`
+	Start   time.Time `json:"start"`
 }
 
 // ReqWT defines model for ReqWT.
 type ReqWT struct {
-	Request *Request   `json:"request,omitempty"`
-	Time    *time.Time `json:"time,omitempty"`
+	Request Request   `json:"request"`
+	Time    time.Time `json:"time"`
 }
 
 // Request defines model for Request.
 type Request struct {
-	RequestNumber *int `json:"requestNumber,omitempty"`
-	SourceNumber  *int `json:"sourceNumber,omitempty"`
+	RequestNumber int `json:"requestNumber"`
+	SourceNumber  int `json:"sourceNumber"`
 }
 
-// GetAllBufProcessedRequestsParams defines parameters for GetAllBufProcessedRequests.
-type GetAllBufProcessedRequestsParams struct {
-	BufNum int `form:"bufNum" json:"bufNum"`
+// SourcePivotInfo defines model for SourcePivotInfo.
+type SourcePivotInfo struct {
+	Name               string  `json:"name"`
+	ProcTime           string  `json:"procTime"`
+	ProcTimeDispertion string  `json:"procTimeDispertion"`
+	RejChance          float64 `json:"rejChance"`
+	ReqCount           int     `json:"reqCount"`
+	SysTime            string  `json:"sysTime"`
+	WaitTime           string  `json:"waitTime"`
+	WaitTimeDispertion string  `json:"waitTimeDispertion"`
 }
 
-// GetDeviceDoneRequestsParams defines parameters for GetDeviceDoneRequests.
-type GetDeviceDoneRequestsParams struct {
-	DevNum int `form:"devNum" json:"devNum"`
+// SystemParameters defines model for SystemParameters.
+type SystemParameters struct {
+	BuffersCount    int    `json:"buffersCount"`
+	DevA            string `json:"devA"`
+	DevB            string `json:"devB"`
+	DevicesCount    int    `json:"devicesCount"`
+	IterationsCount *int   `json:"iterationsCount,omitempty"`
+	SourcesCount    int    `json:"sourcesCount"`
+	SourcesLambda   string `json:"sourcesLambda"`
+	StepMode        bool   `json:"stepMode"`
 }
 
-// GetAllGenRequestsParams defines parameters for GetAllGenRequests.
-type GetAllGenRequestsParams struct {
-	SourceNum int `form:"sourceNum" json:"sourceNum"`
+// WaveInfo defines model for WaveInfo.
+type WaveInfo struct {
+	Buffers   []APIBuffer `json:"buffers"`
+	Devices   []APIDevice `json:"devices"`
+	Done      []ReqWSE    `json:"done"`
+	EndTime   time.Time   `json:"endTime"`
+	Rejected  []ReqWSE    `json:"rejected"`
+	Sources   []APISource `json:"sources"`
+	StartTime time.Time   `json:"startTime"`
 }
+
+// InitSystemJSONRequestBody defines body for InitSystem for application/json ContentType.
+type InitSystemJSONRequestBody = SystemParameters
 
 // ServerInterface represents all server handlers.
 type ServerInterface interface {
-	// Get array of all buffer numbers
-	// (GET /buffer/getAll)
-	GetAllBuffers(w http.ResponseWriter, r *http.Request)
-	// Get all requests processed by buffer
-	// (GET /buffer/getAllProcessed)
-	GetAllBufProcessedRequests(w http.ResponseWriter, r *http.Request, params GetAllBufProcessedRequestsParams)
-	// Get array of all device numbers
-	// (GET /device/getAll)
-	GetAllDevices(w http.ResponseWriter, r *http.Request)
-	// Get all requests done by device
-	// (GET /device/getDone)
-	GetDeviceDoneRequests(w http.ResponseWriter, r *http.Request, params GetDeviceDoneRequestsParams)
-	// Get all done requests
-	// (GET /request/getAllDone)
-	GetAllDoneRequests(w http.ResponseWriter, r *http.Request)
-	// Get all rejected requests
-	// (GET /request/getAllRejected)
-	GetAllRejectedRequests(w http.ResponseWriter, r *http.Request)
-	// Get array of all source numbers
-	// (GET /source/getAll)
-	GetAllSources(w http.ResponseWriter, r *http.Request)
-	// Get all requests generated by source
-	// (GET /source/getGenerated)
-	GetAllGenRequests(w http.ResponseWriter, r *http.Request, params GetAllGenRequestsParams)
+	// Do step
+	// (POST /doStep)
+	DoStep(w http.ResponseWriter, r *http.Request)
+	// Get info for pivot table
+	// (GET /getPivotInfo)
+	GetPivotInfo(w http.ResponseWriter, r *http.Request)
+	// Get all info for waveform
+	// (GET /getWaveInfo)
+	GetWaveNumber(w http.ResponseWriter, r *http.Request)
+	// Create new system
+	// (POST /initSystem)
+	InitSystem(w http.ResponseWriter, r *http.Request)
 }
 
 // ServerInterfaceWrapper converts contexts to parameters.
@@ -105,12 +132,12 @@ type ServerInterfaceWrapper struct {
 
 type MiddlewareFunc func(http.Handler) http.Handler
 
-// GetAllBuffers operation middleware
-func (siw *ServerInterfaceWrapper) GetAllBuffers(w http.ResponseWriter, r *http.Request) {
+// DoStep operation middleware
+func (siw *ServerInterfaceWrapper) DoStep(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAllBuffers(w, r)
+		siw.Handler.DoStep(w, r)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -120,32 +147,12 @@ func (siw *ServerInterfaceWrapper) GetAllBuffers(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// GetAllBufProcessedRequests operation middleware
-func (siw *ServerInterfaceWrapper) GetAllBufProcessedRequests(w http.ResponseWriter, r *http.Request) {
+// GetPivotInfo operation middleware
+func (siw *ServerInterfaceWrapper) GetPivotInfo(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	var err error
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params GetAllBufProcessedRequestsParams
-
-	// ------------- Required query parameter "bufNum" -------------
-
-	if paramValue := r.URL.Query().Get("bufNum"); paramValue != "" {
-
-	} else {
-		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "bufNum"})
-		return
-	}
-
-	err = runtime.BindQueryParameter("form", true, true, "bufNum", r.URL.Query(), &params.BufNum)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "bufNum", Err: err})
-		return
-	}
-
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAllBufProcessedRequests(w, r, params)
+		siw.Handler.GetPivotInfo(w, r)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -155,12 +162,12 @@ func (siw *ServerInterfaceWrapper) GetAllBufProcessedRequests(w http.ResponseWri
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// GetAllDevices operation middleware
-func (siw *ServerInterfaceWrapper) GetAllDevices(w http.ResponseWriter, r *http.Request) {
+// GetWaveNumber operation middleware
+func (siw *ServerInterfaceWrapper) GetWaveNumber(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAllDevices(w, r)
+		siw.Handler.GetWaveNumber(w, r)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -170,112 +177,12 @@ func (siw *ServerInterfaceWrapper) GetAllDevices(w http.ResponseWriter, r *http.
 	handler.ServeHTTP(w, r.WithContext(ctx))
 }
 
-// GetDeviceDoneRequests operation middleware
-func (siw *ServerInterfaceWrapper) GetDeviceDoneRequests(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	var err error
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params GetDeviceDoneRequestsParams
-
-	// ------------- Required query parameter "devNum" -------------
-
-	if paramValue := r.URL.Query().Get("devNum"); paramValue != "" {
-
-	} else {
-		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "devNum"})
-		return
-	}
-
-	err = runtime.BindQueryParameter("form", true, true, "devNum", r.URL.Query(), &params.DevNum)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "devNum", Err: err})
-		return
-	}
-
-	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetDeviceDoneRequests(w, r, params)
-	})
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r.WithContext(ctx))
-}
-
-// GetAllDoneRequests operation middleware
-func (siw *ServerInterfaceWrapper) GetAllDoneRequests(w http.ResponseWriter, r *http.Request) {
+// InitSystem operation middleware
+func (siw *ServerInterfaceWrapper) InitSystem(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAllDoneRequests(w, r)
-	})
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r.WithContext(ctx))
-}
-
-// GetAllRejectedRequests operation middleware
-func (siw *ServerInterfaceWrapper) GetAllRejectedRequests(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAllRejectedRequests(w, r)
-	})
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r.WithContext(ctx))
-}
-
-// GetAllSources operation middleware
-func (siw *ServerInterfaceWrapper) GetAllSources(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAllSources(w, r)
-	})
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r.WithContext(ctx))
-}
-
-// GetAllGenRequests operation middleware
-func (siw *ServerInterfaceWrapper) GetAllGenRequests(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-
-	var err error
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params GetAllGenRequestsParams
-
-	// ------------- Required query parameter "sourceNum" -------------
-
-	if paramValue := r.URL.Query().Get("sourceNum"); paramValue != "" {
-
-	} else {
-		siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "sourceNum"})
-		return
-	}
-
-	err = runtime.BindQueryParameter("form", true, true, "sourceNum", r.URL.Query(), &params.SourceNum)
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "sourceNum", Err: err})
-		return
-	}
-
-	var handler http.Handler = http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAllGenRequests(w, r, params)
+		siw.Handler.InitSystem(w, r)
 	})
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -399,28 +306,16 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	}
 
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/buffer/getAll", wrapper.GetAllBuffers)
+		r.Post(options.BaseURL+"/doStep", wrapper.DoStep)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/buffer/getAllProcessed", wrapper.GetAllBufProcessedRequests)
+		r.Get(options.BaseURL+"/getPivotInfo", wrapper.GetPivotInfo)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/device/getAll", wrapper.GetAllDevices)
+		r.Get(options.BaseURL+"/getWaveInfo", wrapper.GetWaveNumber)
 	})
 	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/device/getDone", wrapper.GetDeviceDoneRequests)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/request/getAllDone", wrapper.GetAllDoneRequests)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/request/getAllRejected", wrapper.GetAllRejectedRequests)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/source/getAll", wrapper.GetAllSources)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/source/getGenerated", wrapper.GetAllGenRequests)
+		r.Post(options.BaseURL+"/initSystem", wrapper.InitSystem)
 	})
 
 	return r
@@ -429,20 +324,24 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 // Base64 encoded, gzipped, json marshaled Swagger object
 var swaggerSpec = []string{
 
-	"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",
+	"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",
+	"prQEFE0sdWKa8/jj+E8AAAD//2UMVj6jEQAA",
 }
 
 // GetSwagger returns the content of the embedded swagger specification file

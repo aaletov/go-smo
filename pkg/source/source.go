@@ -17,25 +17,26 @@ type Source interface {
 	GetNumber() int
 	GetGenerated() []api.ReqWGT
 	GetNextEvent() *events.GenReqEvent
+	GetLambda() time.Duration
 }
 
 var (
-	sourcesCount int = 0
+	SourcesCount int = 0
 	RandSource       = rand.NewSource(uint64(time.Now().UnixNano()))
 )
 
 // Lambda is an expected value of time passed until next req
 func NewSource(logger *logrus.Logger, lambda time.Duration) Source {
-	sourcesCount++
+	SourcesCount++
 	ll := logger.WithFields(logrus.Fields{
-		"component": fmt.Sprintf("Source #%v", sourcesCount),
+		"component": fmt.Sprintf("Source #%v", SourcesCount),
 	})
 
 	return &sourceImpl{
 		logger:        ll,
-		sourceNumber:  sourcesCount,
+		sourceNumber:  SourcesCount,
 		lastReqNumber: 0,
-		nextGenTime:   clock.SMOClock.Time,
+		nextGenTime:   clock.SMOClock.StartTime,
 		lambda:        lambda,
 		gen: distuv.Poisson{
 			Lambda: float64(lambda),
@@ -59,15 +60,16 @@ func (s *sourceImpl) Generate() *api.ReqWGT {
 	ll := s.logger.WithField("method", "Generate")
 	s.lastReqNumber++
 	req := &api.Request{
-		SourceNumber:  &s.sourceNumber,
-		RequestNumber: &s.lastReqNumber,
+		SourceNumber:  s.sourceNumber,
+		RequestNumber: s.lastReqNumber,
 	}
+	genTime := s.nextGenTime
 	s.allGenerated = append(s.allGenerated, api.ReqWGT{
-		Request: req,
-		Time:    &s.nextGenTime,
+		Request: *req,
+		Time:    genTime,
 	})
 	ll.Info("Generated " + req.String())
-	return &api.ReqWGT{Request: req, Time: &s.nextGenTime}
+	return &api.ReqWGT{Request: *req, Time: s.nextGenTime}
 }
 
 func (s sourceImpl) GetNumber() int {
@@ -87,4 +89,8 @@ func (s *sourceImpl) GetNextEvent() *events.GenReqEvent {
 		Time:      s.nextGenTime,
 		SourceNum: s.sourceNumber,
 	}
+}
+
+func (s sourceImpl) GetLambda() time.Duration {
+	return s.lambda
 }
